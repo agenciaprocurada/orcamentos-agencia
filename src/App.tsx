@@ -18,17 +18,19 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
+import { SettingsView } from './components/SettingsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
 import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord } from './types/database';
 import type { User } from '@supabase/supabase-js';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'cashflow-form' | 'clients' | 'client-form'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedCashFlow, setSelectedCashFlow] = useState<CashFlow | null>(null);
@@ -177,8 +179,15 @@ function App() {
               </div>
             </div>
             <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center gap-3 px-4 py-3 mt-2 rounded-xl font-medium transition-all cursor-pointer w-full text-left ${activeTab === 'settings' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
+            >
+              <Settings size={18} />
+              Configurações
+            </button>
+            <button
               onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl font-medium text-red-500 hover:bg-red-50/50 backdrop-blur-sm transition-all cursor-pointer w-full text-left"
+              className="flex items-center gap-3 px-4 py-3 mt-1 rounded-xl font-medium text-red-500 hover:bg-red-50/50 backdrop-blur-sm transition-all cursor-pointer w-full text-left"
             >
               <LogOut size={18} />
               Sair
@@ -200,7 +209,8 @@ function App() {
                             activeTab === 'cashflow-categories' ? 'Categorias do Fluxo de Caixa' :
                               activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
                                 activeTab === 'clients' ? 'Clientes' :
-                                  activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') : ''}
+                                  activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
+                                    activeTab === 'settings' ? 'Configurações' : ''}
             </h2>
             <div className="flex items-center gap-4">
               {activeTab === 'proposals' && (
@@ -301,6 +311,7 @@ function App() {
                     onCancel={() => setActiveTab('clients')}
                   />
                 )}
+                {activeTab === 'settings' && <SettingsView />}
               </div>
             )}
           </div>
