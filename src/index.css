@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #F9F8F6;
+  --color-surface: #FFFFFF;
+  --color-primary: #C13584;
+  --color-primary-hover: #A42D70;
+  --color-primary-50: #fff0f7;
+  --color-primary-500: #C13584;
+  --color-primary-900: #4a1131;
+
+  --rounded-card: 8px;
+  --rounded-btn: 8px;
+}
+
+@layer base {
+  :root {
+    --background: var(--color-background);
+    --foreground: #1c1c1e;
+    --card: var(--color-surface);
+    --card-foreground: #1c1c1e;
+    --popover: var(--color-surface);
+    --popover-foreground: #1c1c1e;
+    --primary: var(--color-primary);
+    --primary-foreground: #ffffff;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --accent: var(--color-primary-50);
+    --accent-foreground: var(--color-primary-900);
+    --destructive: #ef4444;
+    --destructive-foreground: #fafafa;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: var(--color-primary);
+    --radius: var(--rounded-card);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+  
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', 'Montserrat', sans-serif;
+  }
+}

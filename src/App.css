@@ -1,0 +1,5 @@
+
+.leading-relaxed ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+.leading-relaxed ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+.leading-relaxed p { margin-bottom: 0.75rem; }
+
