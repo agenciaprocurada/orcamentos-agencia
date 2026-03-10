@@ -12,11 +12,13 @@ RUN npm ci
 # Copia o restante do código
 COPY . .
 
-# Caso utilize variáveis de ambiente que precisam estar disponíveis no frontend, adicione-as aqui como build args:
-# ARG VITE_SUPABASE_URL
-# ARG VITE_SUPABASE_ANON_KEY
-# ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
-# ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+# Injeção das variáveis de ambiente para o build do React/Vite
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+# Torná-las disponíveis durante o processo de build do 'npm run build'
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
 # Realiza o build (resultado vai para a pasta /dist)
 RUN npm run build
