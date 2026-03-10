@@ -1,16 +1,23 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Settings, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings, Save, Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export function SettingsView() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email && !password) return;
+
+        if (password && password !== confirmPassword) {
+            setMessage({ type: 'error', text: 'As senhas não coincidem. Verifique e tente novamente.' });
+            return;
+        }
 
         setLoading(true);
         setMessage(null);
@@ -29,6 +36,7 @@ export function SettingsView() {
             setMessage({ type: 'success', text: 'Dados atualizados com sucesso. Talvez seja necessário confirmar o email ou relogar.' });
             setEmail('');
             setPassword('');
+            setConfirmPassword('');
         } catch (err: any) {
             setMessage({ type: 'error', text: err.message || 'Erro ao atualizar os dados. Tente novamente.' });
         } finally {
@@ -70,18 +78,45 @@ export function SettingsView() {
 
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Nova Senha</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Deixe em branco para não alterar (mín. 6 caracteres)"
-                        className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner transition-all"
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Deixe em branco para não alterar (mín. 6 caracteres)"
+                            className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner transition-all pr-12"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#C13584] transition-colors"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
+
+                {password.length > 0 && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Confirmar Nova Senha</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="Digite a senha novamente para confirmar"
+                                className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner transition-all pr-12 ${confirmPassword && password !== confirmPassword
+                                        ? 'border-red-400 focus:ring-red-400'
+                                        : 'border-white/60'
+                                    }`}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 <button
                     type="submit"
-                    disabled={loading || (!email && !password)}
+                    disabled={loading || (!email && !password) || (password.length > 0 && password !== confirmPassword)}
                     className="w-full bg-[#C13584] hover:bg-[#A42D70] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3 px-4 shadow-lg shadow-pink-200 transition-all flex justify-center items-center gap-2 mt-4 cursor-pointer"
                 >
                     {loading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
