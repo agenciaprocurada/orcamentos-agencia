@@ -19,18 +19,20 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Settings
+  Settings,
+  ListTodo
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
+import { TasksView } from './components/TasksView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
 import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord } from './types/database';
 import type { User } from '@supabase/supabase-js';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedCashFlow, setSelectedCashFlow] = useState<CashFlow | null>(null);
@@ -56,7 +58,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, loading, refetch, silentRefetch } = useSupabase();
 
   useEffect(() => {
     if (user?.id) {
@@ -109,6 +111,13 @@ function App() {
             >
               <FileText size={20} />
               Propostas
+            </button>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer ${activeTab === 'tasks' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
+            >
+              <ListTodo size={20} />
+              Tarefas
             </button>
             <button
               onClick={() => setActiveTab('cashflow')}
@@ -200,17 +209,18 @@ function App() {
           <header className="h-20 flex-shrink-0 border-b border-white/40 bg-white/30 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] print:hidden">
             <h2 className="text-2xl font-semibold capitalize text-gray-800">
               {activeTab === 'dashboard' ? 'Visão Geral' :
-                activeTab === 'proposals' ? 'Gestão de Propostas' :
-                  activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
-                    activeTab === 'services' ? 'Serviços Base' :
-                      activeTab === 'service-form' ? (selectedService ? 'Editar Serviço' : 'Novo Serviço') :
-                        activeTab === 'cashflow' ? 'Fluxo de Caixa — Por Mês' :
-                          activeTab === 'cashflow-all' ? 'Todos os Lançamentos' :
-                            activeTab === 'cashflow-categories' ? 'Categorias do Fluxo de Caixa' :
-                              activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
-                                activeTab === 'clients' ? 'Clientes' :
-                                  activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
-                                    activeTab === 'settings' ? 'Configurações' : ''}
+                activeTab === 'tasks' ? 'Tarefas' :
+                  activeTab === 'proposals' ? 'Gestão de Propostas' :
+                    activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
+                      activeTab === 'services' ? 'Serviços Base' :
+                        activeTab === 'service-form' ? (selectedService ? 'Editar Serviço' : 'Novo Serviço') :
+                          activeTab === 'cashflow' ? 'Fluxo de Caixa — Por Mês' :
+                            activeTab === 'cashflow-all' ? 'Todos os Lançamentos' :
+                              activeTab === 'cashflow-categories' ? 'Categorias do Fluxo de Caixa' :
+                                activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
+                                  activeTab === 'clients' ? 'Clientes' :
+                                    activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
+                                      activeTab === 'settings' ? 'Configurações' : ''}
             </h2>
             <div className="flex items-center gap-4">
               {activeTab === 'proposals' && (
@@ -256,8 +266,9 @@ function App() {
                 <Loader2 className="animate-spin" size={48} />
               </div>
             ) : (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
                 {activeTab === 'dashboard' && <DashboardView proposals={proposals} cashFlows={cashFlows} />}
+                {activeTab === 'tasks' && <TasksView tasks={tasks} refetch={refetch} />}
                 {activeTab === 'proposals' && (
                   <ProposalsView
                     proposals={proposals}

@@ -80,6 +80,17 @@ export type CashFlowCategoryRecord = {
   created_at: string;
 };
 
+export type Task = {
+  id: string;
+  created_at: string;
+  title: string;
+  description: string | null;
+  due_date: string | null;
+  completed: boolean;
+  project: string;
+  priority: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -107,6 +118,11 @@ export interface Database {
         Row: CashFlowCategoryRecord;
         Insert: { id?: string; name: string; type: 'Income' | 'Expense'; color?: string; created_at?: string; };
         Update: { id?: string; name?: string; type?: 'Income' | 'Expense'; color?: string; created_at?: string; };
+      };
+      tasks: {
+        Row: Task;
+        Insert: { id?: string; created_at?: string; title: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
+        Update: { id?: string; created_at?: string; title?: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
       };
     };
   };
