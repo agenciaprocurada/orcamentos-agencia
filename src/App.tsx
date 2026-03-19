@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  ListTodo
+  ListTodo,
+  GripVertical
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
@@ -1738,6 +1739,28 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   };
   const removePhase = (index: number) => setPhases(phases.filter((_, i) => i !== index));
 
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => setDragIndex(index);
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+  const handleDrop = (index: number) => {
+    if (dragIndex === null || dragIndex === index) return;
+    const reordered = [...phases];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(index, 0, moved);
+    setPhases(reordered);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   const addExtraService = () => setExtraServices([...extraServices, { serviceType: '', value: '' }]);
   const updateExtraService = (index: number, field: 'serviceType' | 'value', val: string) => {
     const updated = [...extraServices];
@@ -2171,7 +2194,24 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
 
             <div className="flex flex-col gap-3">
               {phases.length === 0 ? <p className="text-sm text-gray-500 italic">Sem fases definidas.</p> : phases.map((ph, i) => (
-                <div key={i} className="flex gap-4 items-center bg-white/30 p-3 rounded-xl border border-white/40">
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={e => handleDragOver(e, i)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex gap-4 items-center p-3 rounded-xl border transition-all ${
+                    dragOverIndex === i && dragIndex !== i
+                      ? 'border-[#C13584] bg-[#C13584]/10 scale-[1.01]'
+                      : dragIndex === i
+                      ? 'border-white/40 bg-white/10 opacity-50'
+                      : 'border-white/40 bg-white/30'
+                  }`}
+                >
+                  <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0">
+                    <GripVertical size={18} />
+                  </div>
                   <input type="text" placeholder="Nome da fase..." value={ph.name} onChange={e => updatePhase(i, 'name', e.target.value)} className="flex-1 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
                   <div className="flex items-center gap-2">
                     <input type="number" placeholder="Dias" value={ph.duration_days} onChange={e => updatePhase(i, 'duration_days', parseInt(e.target.value) || 0)} className="w-20 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
