@@ -276,7 +276,16 @@ function App() {
                     refetch={refetch}
                     onEditProposal={(p) => { setSelectedProposal(p); setActiveTab('proposal-form'); }}
                     onApproveProposal={(p) => setApprovalTarget(p)}
-                    onPrintProposal={(p) => { setPrintProposal(p); setTimeout(() => window.print(), 100); }}
+                    onPrintProposal={(p) => {
+                      setPrintProposal(p);
+                      const num = p.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+                      setTimeout(() => {
+                        const prev = document.title;
+                        document.title = `Proposta_${num}`;
+                        window.print();
+                        document.title = prev;
+                      }, 100);
+                    }}
                   />
                 )}
                 {activeTab === 'proposal-form' && (
@@ -287,7 +296,16 @@ function App() {
                     onSave={() => { setActiveTab('proposals'); refetch(); }}
                     onCancel={() => setActiveTab('proposals')}
                     onApprove={(p) => setApprovalTarget(p)}
-                    onPrint={(p, c) => { setPrintProposal({ proposal: p, client: c }); setTimeout(() => window.print(), 150); }}
+                    onPrint={(p, c) => {
+                      setPrintProposal({ proposal: p, client: c });
+                      const num = p.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+                      setTimeout(() => {
+                        const prev = document.title;
+                        document.title = `Proposta_${num}`;
+                        window.print();
+                        document.title = prev;
+                      }, 150);
+                    }}
                   />
                 )}
                 {activeTab === 'cashflow' && <CashFlowView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
