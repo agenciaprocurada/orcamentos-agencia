@@ -1690,7 +1690,8 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
 
   const [serviceId, setServiceId] = useState<string>(proposalData?.proposal.service_id || '');
   const [serviceTypeStr, setServiceTypeStr] = useState<string>(proposalData?.proposal.service_type || 'Custom');
-  const [value, setValue] = useState(proposalData?.proposal.value.toString() || '');
+  const savedContent = proposalData?.proposal.content_json as Record<string, unknown> | null;
+  const [value, setValue] = useState((savedContent?.firstServiceValue as string) || proposalData?.proposal.value.toString() || '');
   const [status, setStatus] = useState<ProposalStatus>(proposalData?.proposal.status || 'Draft');
 
   const [visionText, setVisionText] = useState(proposalData?.proposal.vision_text || '');
@@ -1701,7 +1702,6 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   const [phases, setPhases] = useState<ProposalPhase[]>(proposalData?.proposal.project_phases || []);
 
   // Discount
-  const savedContent = proposalData?.proposal.content_json as Record<string, unknown> | null;
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>((savedContent?.discountType as 'fixed' | 'percent') || 'fixed');
   const [discountRaw, setDiscountRaw] = useState<string>((savedContent?.discountValue as string) || '0');
   const [upfrontPrice, setUpfrontPrice] = useState<string>((savedContent?.upfrontPrice as string) || '');
@@ -1842,7 +1842,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
         investment_text: investmentText,
         start_date: startDate ? startDate : null,
         project_phases: phases,
-        content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices }
+        content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value }
       };
 
       let clientId = selectedClientId;
@@ -1891,7 +1891,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
       investment_text: investmentText,
       project_phases: phases,
       start_date: startDate || null,
-      content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices },
+      content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value },
       created_at: proposalData?.proposal.created_at || new Date().toISOString(),
     };
     const syntheticClient: Client | null = clientMode === 'existing'
