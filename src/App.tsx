@@ -871,6 +871,14 @@ function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; clien
   const discountRaw = (savedContent?.discountValue as string) || '0';
   const upfrontPrice = (savedContent?.upfrontPrice as string) || '';
   const netValue = (savedContent?.netValue as number) ?? Number(proposal.value);
+  const extraServicesPrint = (savedContent?.extraServices as { serviceType: string; value: string }[]) || [];
+  const firstServiceValue = (savedContent?.firstServiceValue as string) || '';
+  const firstServiceNumeric = parseFloat(firstServiceValue) || (Number(proposal.value) - extraServicesPrint.reduce((s, e) => s + (parseFloat(e.value) || 0), 0));
+  const allServicesPrint = [
+    { serviceType: proposal.service_type || 'Serviço', value: firstServiceNumeric },
+    ...extraServicesPrint.map(e => ({ serviceType: e.serviceType, value: parseFloat(e.value) || 0 }))
+  ];
+  const fmtPrint = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const phases: { name: string; duration_days: number }[] = (proposal.project_phases as any) || [];
 
   const totalBusinessDays = phases.reduce((acc, ph) => acc + (ph.duration_days || 0), 0);
@@ -1014,20 +1022,34 @@ function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; clien
           )}
 
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '14px' }}>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                <td style={{ padding: '10px 12px', color: '#6b7280' }}>Valor Bruto</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>R$ {Number(proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+            <thead>
+              <tr style={{ backgroundColor: '#fdf2f8', borderBottom: '2px solid #C13584' }}>
+                <th style={{ padding: '8px 12px', textAlign: 'left', color: '#C13584', fontWeight: 700 }}>Serviço</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right', color: '#C13584', fontWeight: 700 }}>Valor</th>
               </tr>
+            </thead>
+            <tbody>
+              {allServicesPrint.map((s, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                  <td style={{ padding: '10px 12px', color: '#374151' }}>{s.serviceType}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>R$ {fmtPrint(s.value)}</td>
+                </tr>
+              ))}
+              {allServicesPrint.length > 1 && (
+                <tr style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                  <td style={{ padding: '10px 12px', color: '#6b7280', fontStyle: 'italic' }}>Subtotal</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>R$ {fmtPrint(allServicesPrint.reduce((s, e) => s + e.value, 0))}</td>
+                </tr>
+              )}
               {discountAmt > 0 && (
                 <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
                   <td style={{ padding: '10px 12px', color: '#6b7280' }}>Desconto ({discountType === 'percent' ? `${discountRaw}%` : 'fixo'})</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>- R$ {discountAmt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>- R$ {fmtPrint(discountAmt)}</td>
                 </tr>
               )}
               <tr style={{ backgroundColor: '#fdf2f8' }}>
-                <td style={{ padding: '12px 12px', fontWeight: 800, fontSize: '15px' }}>Valor Total (Líquido)</td>
-                <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 800, fontSize: '18px', color: '#C13584' }}>R$ {netValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '12px 12px', fontWeight: 800, fontSize: '15px' }}>Valor Total Líquido</td>
+                <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 800, fontSize: '18px', color: '#C13584' }}>R$ {fmtPrint(netValue)}</td>
               </tr>
             </tbody>
           </table>
@@ -2421,32 +2443,52 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
                 )}
 
                 {/* Value summary table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '14px' }}>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '10px 12px', color: '#6b7280' }}>Valor Bruto</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
-                        R$ {Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                    {discountAmt > 0 && (
-                      <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                        <td style={{ padding: '10px 12px', color: '#6b7280' }}>
-                          Desconto ({discountType === 'percent' ? `${discountRaw}%` : 'fixo'})
-                        </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>
-                          - R$ {discountAmt.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    )}
-                    <tr style={{ backgroundColor: '#fdf2f8' }}>
-                      <td style={{ padding: '12px 12px', fontWeight: 800, fontSize: '15px' }}>Valor Total (Líquido)</td>
-                      <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 800, fontSize: '18px', color: '#C13584' }}>
-                        R$ {netValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                {(() => {
+                  const allSvcs = [
+                    { serviceType: serviceTypeStr || 'Serviço', value: firstServiceValue },
+                    ...extraServices.map(e => ({ serviceType: e.serviceType, value: parseFloat(e.value) || 0 }))
+                  ];
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#fdf2f8', borderBottom: '2px solid #C13584' }}>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', color: '#C13584', fontWeight: 700 }}>Serviço</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right', color: '#C13584', fontWeight: 700 }}>Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allSvcs.map((s, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                            <td style={{ padding: '10px 12px', color: '#374151' }}>{s.serviceType}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>R$ {fmtBRL(s.value)}</td>
+                          </tr>
+                        ))}
+                        {allSvcs.length > 1 && (
+                          <tr style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                            <td style={{ padding: '10px 12px', color: '#6b7280', fontStyle: 'italic' }}>Subtotal</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>R$ {fmtBRL(grossValue)}</td>
+                          </tr>
+                        )}
+                        {discountAmt > 0 && (
+                          <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                            <td style={{ padding: '10px 12px', color: '#6b7280' }}>
+                              Desconto ({discountType === 'percent' ? `${discountRaw}%` : 'fixo'})
+                            </td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>
+                              - R$ {fmtBRL(discountAmt)}
+                            </td>
+                          </tr>
+                        )}
+                        <tr style={{ backgroundColor: '#fdf2f8' }}>
+                          <td style={{ padding: '12px 12px', fontWeight: 800, fontSize: '15px' }}>Valor Total Líquido</td>
+                          <td style={{ padding: '12px 12px', textAlign: 'right', fontWeight: 800, fontSize: '18px', color: '#C13584' }}>
+                            R$ {fmtBRL(netValue)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  );
+                })()}
 
                 {/* Installments table */}
                 {installments.length > 0 && (
