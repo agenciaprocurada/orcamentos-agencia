@@ -1705,6 +1705,11 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   const [discountRaw, setDiscountRaw] = useState<string>((savedContent?.discountValue as string) || '0');
   const [upfrontPrice, setUpfrontPrice] = useState<string>((savedContent?.upfrontPrice as string) || '');
 
+  // Extra services
+  const [extraServices, setExtraServices] = useState<{ serviceType: string; value: string }[]>(
+    (savedContent?.extraServices as { serviceType: string; value: string }[]) || []
+  );
+
   // Installments
   const [numInstallments, setNumInstallments] = useState<number>((savedContent?.numInstallments as number) || 1);
   const [installments, setInstallments] = useState<{ date: string; value: number }[]>(
@@ -1733,8 +1738,18 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   };
   const removePhase = (index: number) => setPhases(phases.filter((_, i) => i !== index));
 
+  const addExtraService = () => setExtraServices([...extraServices, { serviceType: '', value: '' }]);
+  const updateExtraService = (index: number, field: 'serviceType' | 'value', val: string) => {
+    const updated = [...extraServices];
+    updated[index] = { ...updated[index], [field]: val };
+    setExtraServices(updated);
+  };
+  const removeExtraService = (index: number) => setExtraServices(extraServices.filter((_, i) => i !== index));
+
   // --- Computed discount / net value ---
-  const grossValue = parseFloat(value) || 0;
+  const firstServiceValue = parseFloat(value) || 0;
+  const extraServicesTotal = extraServices.reduce((sum, s) => sum + (parseFloat(s.value) || 0), 0);
+  const grossValue = firstServiceValue + extraServicesTotal;
   const discountAmt = discountType === 'percent'
     ? grossValue * (parseFloat(discountRaw) || 0) / 100
     : (parseFloat(discountRaw) || 0);
@@ -1793,12 +1808,10 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
     setLoading(true);
 
     try {
-      const numericValue = parseFloat(value.replace(',', '.'));
-
       const payload = {
         service_id: serviceId || null,
         service_type: serviceTypeStr,
-        value: numericValue,
+        value: grossValue,
         status: status,
         vision_text: visionText,
         engine_text: engineText,
@@ -1806,7 +1819,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
         investment_text: investmentText,
         start_date: startDate ? startDate : null,
         project_phases: phases,
-        content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice }
+        content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices }
       };
 
       let clientId = selectedClientId;
@@ -1847,7 +1860,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
       client_id: proposalData?.proposal.client_id || '',
       service_id: serviceId || null,
       service_type: serviceTypeStr,
-      value: parseFloat(value) || 0,
+      value: grossValue,
       status,
       vision_text: visionText,
       engine_text: engineText,
@@ -1855,7 +1868,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
       investment_text: investmentText,
       project_phases: phases,
       start_date: startDate || null,
-      content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice },
+      content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices },
       created_at: proposalData?.proposal.created_at || new Date().toISOString(),
     };
     const syntheticClient: Client | null = clientMode === 'existing'
@@ -1911,17 +1924,62 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Serviço Base (Carrega o Modelo)</label>
-                <select
-                  value={serviceId}
-                  onChange={e => handleApplyService(e.target.value)}
-                  className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800"
-                >
-                  <option value="">Selecione para carregar informações...</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name} - R$ {s.base_price}</option>)}
-                </select>
+            {/* SERVICES SECTION */}
+            <div className="flex flex-col gap-4 p-6 bg-white/30 rounded-2xl border border-white/50">
+              <h4 className="font-semibold text-gray-800 text-lg">Serviços</h4>
+
+              {/* First service */}
+              <div className="flex flex-col gap-2">
+                <label className="block text-sm font-medium text-gray-700">Serviço Principal (Carrega o Modelo)</label>
+                <div className="flex gap-3 items-center">
+                  <select
+                    value={serviceId}
+                    onChange={e => handleApplyService(e.target.value)}
+                    className="flex-1 border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800"
+                  >
+                    <option value="">Selecione para carregar informações...</option>
+                    {services.map(s => <option key={s.id} value={s.id}>{s.name} - R$ {s.base_price}</option>)}
+                  </select>
+                  <div className="w-44">
+                    <CurrencyInput required value={value} onChange={setValue} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Extra services */}
+              {extraServices.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-gray-700">Serviços Adicionais</label>
+                  {extraServices.map((es, i) => (
+                    <div key={i} className="flex gap-3 items-center">
+                      <input
+                        type="text"
+                        placeholder="Nome do serviço..."
+                        value={es.serviceType}
+                        onChange={e => updateExtraService(i, 'serviceType', e.target.value)}
+                        className="flex-1 border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                      />
+                      <div className="w-44">
+                        <CurrencyInput value={es.value} onChange={v => updateExtraService(i, 'value', v)} />
+                      </div>
+                      <button type="button" onClick={() => removeExtraService(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <button type="button" onClick={addExtraService}
+                  className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer">
+                  + Adicionar Serviço
+                </button>
+                {extraServices.length > 0 && (
+                  <p className="text-sm text-gray-600">
+                    Total Bruto: <span className="font-bold text-gray-800">R$ {fmtBRL(grossValue)}</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1932,8 +1990,10 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
               {/* Gross value + status + start date */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Bruto (R$)</label>
-                  <CurrencyInput required value={value} onChange={setValue} />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Bruto Total (R$)</label>
+                  <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-gray-800 font-semibold">
+                    R$ {fmtBRL(grossValue)}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -2162,7 +2222,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
           NOME_CLIENTE: clientName || proposalData?.client?.name || '',
           EMPRESA_CLIENTE: proposalData?.client?.company_name || '',
           SERVICO: serviceTypeStr || '',
-          VALOR_BRUTO: `R$ ${(parseFloat(value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          VALOR_BRUTO: `R$ ${grossValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
           VALOR_LIQUIDO: `R$ ${netValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
           DATA_INICIO: startDate ? new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
           NUM_PARCELAS: String(installments.length || numInstallments),
@@ -2305,7 +2365,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
                       NOME_CLIENTE: clientName || proposalData?.client?.name || '',
                       EMPRESA_CLIENTE: proposalData?.client?.company_name || '',
                       SERVICO: serviceTypeStr || '',
-                      VALOR_BRUTO: `R$ ${(parseFloat(value) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                      VALOR_BRUTO: `R$ ${grossValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                       VALOR_LIQUIDO: `R$ ${netValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                       DATA_INICIO: startDate ? new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
                       NUM_PARCELAS: String(installments.length || numInstallments),
