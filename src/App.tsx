@@ -11,6 +11,7 @@ import {
   Loader2,
   Trash2,
   Edit2,
+  Copy,
   LogOut,
   Briefcase,
   Printer,
@@ -2728,6 +2729,7 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
 // -------------------------------------------------------------
 function ServicesView({ services, refetch, openNewModal, onEditService }: { services: Service[], refetch: () => void, openNewModal: () => void, onEditService: (s: Service) => void }) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
 
   const handleDelete = async (id: string, name: string) => {
     if (confirm(`Tem certeza que deseja apagar o serviço base ${name}?`)) {
@@ -2735,6 +2737,28 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
       await supabase.from('services').delete().eq('id', id);
       refetch();
       setIsDeleting(null);
+    }
+  };
+
+  const handleDuplicate = async (s: Service) => {
+    setIsDuplicating(s.id);
+    try {
+      const { error } = await supabase.from('services').insert({
+        name: `${s.name} (cópia)`,
+        base_price: s.base_price,
+        vision_template: s.vision_template,
+        engine_template: s.engine_template,
+        scope_template: s.scope_template,
+        investment_template: s.investment_template,
+        phases_template: s.phases_template,
+      });
+      if (error) throw error;
+      refetch();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao duplicar serviço base: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setIsDuplicating(null);
     }
   };
 
@@ -2772,6 +2796,9 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
                   <div className="flex items-center justify-end gap-3 text-gray-400">
                     <button onClick={() => onEditService(s)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                       <Edit2 size={16} />
+                    </button>
+                    <button disabled={isDuplicating === s.id} onClick={() => handleDuplicate(s)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Duplicar">
+                      {isDuplicating === s.id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
                     </button>
                     <button disabled={isDeleting === s.id} onClick={() => handleDelete(s.id, s.name)} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
                       {isDeleting === s.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
