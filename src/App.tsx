@@ -892,6 +892,7 @@ function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; clien
   const netValue = (savedContent?.netValue as number) ?? Number(proposal.value);
   const extraServicesPrint = (savedContent?.extraServices as { serviceType: string; value: string }[]) || [];
   const firstServiceValue = (savedContent?.firstServiceValue as string) || '';
+  const brand = (savedContent?.brand as 'octo' | 'vinicius' | 'procurada') || 'octo';
   const firstServiceNumeric = parseFloat(firstServiceValue) || (Number(proposal.value) - extraServicesPrint.reduce((s, e) => s + (parseFloat(e.value) || 0), 0));
   const allServicesPrint = [
     { serviceType: proposal.service_type || 'Serviço', value: firstServiceNumeric },
@@ -926,9 +927,19 @@ function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; clien
 
       {/* Header */}
       <div className="flex items-center gap-4 border-b-2 border-[#C13584]/30 pb-6 mb-8 mt-4">
-        <h1 className="text-4xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
-          agência<br />OCTO.
-        </h1>
+        {brand === 'vinicius' ? (
+          <h1 className="text-3xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+            Vinicius<br />Kolling.
+          </h1>
+        ) : brand === 'procurada' ? (
+          <h1 className="text-3xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+            agência<br />PROCURADA.
+          </h1>
+        ) : (
+          <h1 className="text-4xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+            agência<br />OCTO.
+          </h1>
+        )}
         <div className="h-12 w-px bg-gray-300 mx-2"></div>
         <div>
           <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Proposta de</p>
@@ -1175,9 +1186,10 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
         <thead>
           <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
             <th className="p-4 pl-6 font-medium w-24">Nº</th>
-            <th className="p-4 font-medium">Cliente</th>
-            <th className="p-4 font-medium">Serviço</th>
+            <th className="p-4 font-medium">Cliente / Serviço</th>
             <th className="p-4 font-medium">Valor</th>
+            <th className="p-4 font-medium">Valor com Desconto</th>
+            <th className="p-4 font-medium">Cabeçalho</th>
             <th className="p-4 font-medium">Status</th>
             <th className="p-4 pr-6 font-medium text-right">Ação</th>
           </tr>
@@ -1185,7 +1197,7 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
         <tbody className="text-sm">
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={6} className="p-8 text-center text-gray-500">
+              <td colSpan={7} className="p-8 text-center text-gray-500">
                 {search ? `Nenhuma proposta encontrada para "${search}".` : 'Nenhuma proposta cadastrada ainda.'}
               </td>
             </tr>
@@ -1197,15 +1209,37 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
                     #{proposalNumber(p.proposal.id)}
                   </span>
                 </td>
-                <td className="p-4 font-medium text-gray-800">
-                  {p.client?.name || 'Cliente Removido'}
-                  <div className="text-xs text-gray-500 font-normal mt-1">{new Date(p.proposal.created_at).toLocaleDateString('pt-BR')}</div>
-                </td>
-                <td className="p-4 text-gray-600 font-medium">
-                  {p.proposal.service_type}
+                <td className="p-4">
+                  <div className="font-bold text-gray-900">{p.client?.name || 'Cliente Removido'}</div>
+                  <div className="text-sm text-gray-500 font-normal mt-0.5">{p.proposal.service_type}</div>
+                  <div className="text-xs text-gray-400 font-normal mt-0.5">{new Date(p.proposal.created_at).toLocaleDateString('pt-BR')}</div>
                 </td>
                 <td className="p-4 font-medium text-gray-700">
                   <span className="whitespace-nowrap">R$ {Number(p.proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </td>
+                <td className="p-4 font-medium text-gray-700">
+                  {(() => {
+                    const content = p.proposal.content_json as { discountAmt?: number; netValue?: number } | null;
+                    const discountAmt = Number(content?.discountAmt) || 0;
+                    if (discountAmt <= 0) return <span className="text-gray-300">—</span>;
+                    const netValue = Number(content?.netValue) || 0;
+                    return <span className="whitespace-nowrap text-green-700">R$ {netValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>;
+                  })()}
+                </td>
+                <td className="p-4">
+                  {(() => {
+                    const content = p.proposal.content_json as { brand?: string } | null;
+                    const brand = content?.brand === 'vinicius' ? 'vinicius'
+                      : content?.brand === 'procurada' ? 'procurada'
+                      : 'octo';
+                    if (brand === 'vinicius') {
+                      return <span className="px-2.5 py-1 bg-purple-100/80 backdrop-blur-sm text-purple-700 rounded-lg text-xs font-semibold whitespace-nowrap">Vinicius Kolling</span>;
+                    }
+                    if (brand === 'procurada') {
+                      return <span className="px-2.5 py-1 bg-amber-100/80 backdrop-blur-sm text-amber-700 rounded-lg text-xs font-semibold whitespace-nowrap">agência Procurada</span>;
+                    }
+                    return <span className="px-2.5 py-1 bg-pink-100/80 backdrop-blur-sm text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">agência OCTO.</span>;
+                  })()}
                 </td>
                 <td className="p-4">
                   {getStatusBadge(p.proposal.status)}
@@ -1742,6 +1776,9 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   const [startDate, setStartDate] = useState(proposalData?.proposal.start_date || '');
   const [phases, setPhases] = useState<ProposalPhase[]>(proposalData?.proposal.project_phases || []);
 
+  // Header brand
+  const [brand, setBrand] = useState<'octo' | 'vinicius' | 'procurada'>((savedContent?.brand as 'octo' | 'vinicius' | 'procurada') || 'octo');
+
   // Discount
   const [discountType, setDiscountType] = useState<'fixed' | 'percent'>((savedContent?.discountType as 'fixed' | 'percent') || 'fixed');
   const [discountRaw, setDiscountRaw] = useState<string>((savedContent?.discountValue as string) || '0');
@@ -1883,7 +1920,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
         investment_text: investmentText,
         start_date: startDate ? startDate : null,
         project_phases: phases,
-        content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value }
+        content_json: { brand, discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value }
       };
 
       let clientId = selectedClientId;
@@ -1932,7 +1969,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
       investment_text: investmentText,
       project_phases: phases,
       start_date: startDate || null,
-      content_json: { discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value },
+      content_json: { brand, discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value },
       created_at: proposalData?.proposal.created_at || new Date().toISOString(),
     };
     const syntheticClient: Client | null = clientMode === 'existing'
@@ -2051,8 +2088,8 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
             <div className="flex flex-col gap-5 p-6 bg-white/30 rounded-2xl border border-white/50">
               <h4 className="font-semibold text-gray-800 text-lg">Investimento e Condições de Pagamento</h4>
 
-              {/* Gross value + status + start date */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Gross value + status + start date + brand */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Valor Bruto Total (R$)</label>
                   <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-gray-800 font-semibold">
@@ -2073,6 +2110,15 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data Inicial (Cronograma)</label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                     className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cabeçalho</label>
+                  <select value={brand} onChange={e => setBrand(e.target.value as 'octo' | 'vinicius' | 'procurada')}
+                    className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800">
+                    <option value="octo">agência OCTO.</option>
+                    <option value="vinicius">Vinicius Kolling</option>
+                    <option value="procurada">agência Procurada</option>
+                  </select>
                 </div>
               </div>
 
@@ -2318,9 +2364,19 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
 
             {/* Header */}
             <div className="flex items-center gap-4 border-b-2 border-[#C13584]/30 pb-6 mb-8 mt-4">
-              <h1 className="text-4xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
-                agência<br />OCTO.
-              </h1>
+              {brand === 'vinicius' ? (
+                <h1 className="text-3xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  Vinicius<br />Kolling.
+                </h1>
+              ) : brand === 'procurada' ? (
+                <h1 className="text-3xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  agência<br />PROCURADA.
+                </h1>
+              ) : (
+                <h1 className="text-4xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  agência<br />OCTO.
+                </h1>
+              )}
               <div className="h-12 w-px bg-gray-300 mx-2"></div>
               <div>
                 <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Proposta de</p>
