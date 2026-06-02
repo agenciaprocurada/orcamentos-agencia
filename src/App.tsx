@@ -22,7 +22,10 @@ import {
   ChevronRight,
   Settings,
   ListTodo,
-  GripVertical
+  GripVertical,
+  Layers,
+  Link2,
+  Unlink
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
@@ -30,13 +33,14 @@ import { supabase } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
 import { TasksView } from './components/TasksView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
-import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord } from './types/database';
+import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection } from './types/database';
 import type { User } from '@supabase/supabase-js';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedSectionTemplate, setSelectedSectionTemplate] = useState<SectionTemplate | null>(null);
   const [selectedCashFlow, setSelectedCashFlow] = useState<CashFlow | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [approvalTarget, setApprovalTarget] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
@@ -60,7 +64,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, loading, refetch, silentRefetch } = useSupabase();
 
   useEffect(() => {
     if (user?.id) {
@@ -171,6 +175,13 @@ function App() {
               Serviços Base
             </button>
             <button
+              onClick={() => setActiveTab('section-templates')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'section-templates' || activeTab === 'section-template-form' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
+            >
+              <Layers size={20} />
+              Modelos de Seção
+            </button>
+            <button
               onClick={() => setActiveTab('clients')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'clients' || activeTab === 'client-form' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
             >
@@ -222,7 +233,9 @@ function App() {
                                 activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
                                   activeTab === 'clients' ? 'Clientes' :
                                     activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
-                                      activeTab === 'settings' ? 'Configurações' : ''}
+                                      activeTab === 'section-templates' ? 'Modelos de Seção' :
+                                        activeTab === 'section-template-form' ? (selectedSectionTemplate ? 'Editar Modelo de Seção' : 'Novo Modelo de Seção') :
+                                          activeTab === 'settings' ? 'Configurações' : ''}
             </h2>
             <div className="flex items-center gap-4">
               {activeTab === 'proposals' && (
@@ -250,6 +263,12 @@ function App() {
                 <button id="btn-new-service" onClick={() => { setSelectedService(null); setActiveTab('service-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
                   <Plus size={18} />
                   Novo Serviço
+                </button>
+              )}
+              {activeTab === 'section-templates' && (
+                <button onClick={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                  <Plus size={18} />
+                  Novo Modelo
                 </button>
               )}
               {activeTab === 'clients' && (
@@ -294,6 +313,7 @@ function App() {
                     proposalData={selectedProposal}
                     services={services}
                     clients={clients}
+                    sectionTemplates={sectionTemplates}
                     onSave={() => { setActiveTab('proposals'); refetch(); }}
                     onCancel={() => setActiveTab('proposals')}
                     onApprove={(p) => setApprovalTarget(p)}
@@ -328,6 +348,23 @@ function App() {
                     onCancel={() => setActiveTab('services')}
                   />
                 )}
+                {activeTab === 'section-templates' && (
+                  <SectionTemplatesView
+                    sectionTemplates={sectionTemplates}
+                    proposals={proposals}
+                    refetch={refetch}
+                    openNewModal={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }}
+                    onEditTemplate={(t) => { setSelectedSectionTemplate(t); setActiveTab('section-template-form'); }}
+                  />
+                )}
+                {activeTab === 'section-template-form' && (
+                  <SectionTemplateFormView
+                    templateData={selectedSectionTemplate}
+                    proposals={proposals}
+                    onSave={() => { setActiveTab('section-templates'); refetch(); }}
+                    onCancel={() => setActiveTab('section-templates')}
+                  />
+                )}
                 {activeTab === 'clients' && (
                   <ClientsView
                     clients={clients}
@@ -357,7 +394,7 @@ function App() {
       )}
 
       {/* Global print document — always in DOM, only shown at print time */}
-      {printProposal && <ProposalPrintDocument proposal={printProposal.proposal} client={printProposal.client} />}
+      {printProposal && <ProposalPrintDocument proposal={printProposal.proposal} client={printProposal.client} sectionTemplates={sectionTemplates} />}
     </div>
   );
 }
@@ -466,6 +503,42 @@ function TemplateVarChips() {
         </button>
       ))}
     </div>
+  );
+}
+
+// Resolve an additional section to its effective title/content.
+// Template-linked sections read live from the current template (so edits
+// propagate to every proposal); custom sections carry their own copy.
+function resolveSection(section: AdditionalSection, templates: SectionTemplate[]): { title: string; content: string } | null {
+  if (section.kind === 'template') {
+    const t = templates.find(x => x.id === section.template_id);
+    if (!t) return null; // template was deleted -> skip rendering
+    return { title: t.title || '', content: t.content || '' };
+  }
+  return { title: section.title || '', content: section.content || '' };
+}
+
+// Renders the proposal's additional sections (used in both the print document
+// and the in-form print preview). Placed before the Investment section.
+function AdditionalSectionsRender({ sections, templates, rv }: {
+  sections: AdditionalSection[] | null | undefined;
+  templates: SectionTemplate[];
+  rv: (text: string) => string;
+}) {
+  if (!sections || sections.length === 0) return null;
+  return (
+    <>
+      {sections.map((section, idx) => {
+        const resolved = resolveSection(section, templates);
+        if (!resolved || (!resolved.title && !resolved.content)) return null;
+        return (
+          <section key={idx}>
+            <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">{rv(resolved.title)}</h3>
+            <div className="leading-relaxed" dangerouslySetInnerHTML={{ __html: rv(resolved.content) }} />
+          </section>
+        );
+      })}
+    </>
   );
 }
 
@@ -879,7 +952,7 @@ function GanttChart({ phases, startDate }: { phases: { name: string; duration_da
 // PROPOSALS VIEW (LISTING & CRUD)
 // -------------------------------------------------------------
 
-function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; client: Client | null }) {
+function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposal: Proposal; client: Client | null; sectionTemplates: SectionTemplate[] }) {
   const resolveVars = (text: string, vars: Record<string, string>) =>
     text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
 
@@ -1039,6 +1112,9 @@ function ProposalPrintDocument({ proposal, client }: { proposal: Proposal; clien
             })()}
           </section>
         )}
+        {/* Additional sections (linked templates or custom) — before Investment */}
+        <AdditionalSectionsRender sections={proposal.additional_sections} templates={sectionTemplates} rv={rv} />
+
         <section>
           <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">5. Investimento e Condições de Pagamento</h3>
           {proposal.investment_text && (
@@ -1745,10 +1821,11 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
 // -------------------------------------------------------------
 // PROPOSAL FORM VIEW (Create/Edit full page form)
 // -------------------------------------------------------------
-function ProposalFormView({ proposalData, services, clients, onSave, onCancel, onApprove, onPrint }: {
+function ProposalFormView({ proposalData, services, clients, sectionTemplates, onSave, onCancel, onApprove, onPrint }: {
   proposalData: { proposal: Proposal; client: Client | null } | null;
   services: Service[];
   clients: Client[];
+  sectionTemplates: SectionTemplate[];
   onSave: () => void;
   onCancel: () => void;
   onApprove: (p: ProposalData) => void;
@@ -1775,6 +1852,31 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
   const [investmentText, setInvestmentText] = useState(proposalData?.proposal.investment_text || '');
   const [startDate, setStartDate] = useState(proposalData?.proposal.start_date || '');
   const [phases, setPhases] = useState<ProposalPhase[]>(proposalData?.proposal.project_phases || []);
+
+  // Additional sections (linked templates or custom one-offs)
+  const [additionalSections, setAdditionalSections] = useState<AdditionalSection[]>(proposalData?.proposal.additional_sections || []);
+  const [templateToAdd, setTemplateToAdd] = useState<string>('');
+
+  const addCustomSection = () => setAdditionalSections([...additionalSections, { kind: 'custom', title: '', content: '' }]);
+  const addTemplateSection = (templateId: string) => {
+    if (!templateId) return;
+    if (additionalSections.some(s => s.kind === 'template' && s.template_id === templateId)) return; // avoid duplicates
+    setAdditionalSections([...additionalSections, { kind: 'template', template_id: templateId }]);
+    setTemplateToAdd('');
+  };
+  const removeSection = (index: number) => setAdditionalSections(additionalSections.filter((_, i) => i !== index));
+  const updateCustomSection = (index: number, field: 'title' | 'content', val: string) => {
+    setAdditionalSections(additionalSections.map((s, i) => (i === index && s.kind === 'custom') ? { ...s, [field]: val } : s));
+  };
+  // "Personalizar nesta proposta": copy the live template content into a custom
+  // section and break the link, so edits here no longer affect other proposals.
+  const detachSection = (index: number) => {
+    setAdditionalSections(additionalSections.map((s, i) => {
+      if (i !== index || s.kind !== 'template') return s;
+      const t = sectionTemplates.find(x => x.id === s.template_id);
+      return { kind: 'custom', title: t?.title || '', content: t?.content || '' };
+    }));
+  };
 
   // Header brand
   const [brand, setBrand] = useState<'octo' | 'vinicius' | 'procurada'>((savedContent?.brand as 'octo' | 'vinicius' | 'procurada') || 'octo');
@@ -1920,6 +2022,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
         investment_text: investmentText,
         start_date: startDate ? startDate : null,
         project_phases: phases,
+        additional_sections: additionalSections,
         content_json: { brand, discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value }
       };
 
@@ -1968,6 +2071,7 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
       scope_text: scopeText,
       investment_text: investmentText,
       project_phases: phases,
+      additional_sections: additionalSections,
       start_date: startDate || null,
       content_json: { brand, discountType, discountValue: discountRaw, discountAmt, netValue, numInstallments, installments, upfrontPrice, extraServices, firstServiceValue: value },
       created_at: proposalData?.proposal.created_at || new Date().toISOString(),
@@ -2311,6 +2415,84 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
 
             {phases.length > 0 && <GanttChart phases={phases} startDate={startDate} />}
 
+            <hr className="border-white/50" />
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <h4 className="font-semibold text-lg text-gray-800">Seções Adicionais</h4>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">Aparecem antes do Investimento. Use um modelo reutilizável (atualiza em todas as propostas) ou crie um texto manual só para esta.</p>
+
+              <div className="flex flex-col gap-3">
+                {additionalSections.length === 0 && (
+                  <p className="text-sm text-gray-500 italic">Nenhuma seção adicional.</p>
+                )}
+                {additionalSections.map((section, i) => {
+                  if (section.kind === 'template') {
+                    const t = sectionTemplates.find(x => x.id === section.template_id);
+                    return (
+                      <div key={i} className="p-4 rounded-xl border border-[#C13584]/20 bg-[#C13584]/5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Link2 size={16} className="text-[#C13584] flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="font-semibold text-gray-800 truncate">{t ? t.title : 'Modelo removido'}</p>
+                              <p className="text-xs text-[#C13584]">Vinculado ao modelo — atualiza automaticamente</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button type="button" onClick={() => detachSection(i)} title="Personalizar nesta proposta (desvincular)" className="flex items-center gap-1 text-xs font-medium text-gray-600 px-3 py-1.5 border border-white/60 rounded-lg bg-white/60 hover:bg-white/80 cursor-pointer">
+                              <Unlink size={14} /> Personalizar
+                            </button>
+                            <button type="button" onClick={() => removeSection(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                        {t?.content && (
+                          <div className="mt-3 pt-3 border-t border-[#C13584]/10 text-sm text-gray-600 leading-relaxed line-clamp-3" dangerouslySetInnerHTML={{ __html: t.content }} />
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={i} className="p-4 rounded-xl border border-white/60 bg-white/40">
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="text"
+                          placeholder="Título da seção (ex: MATERIAIS A SER FORNECIDOS PELO CLIENTE)"
+                          value={section.title}
+                          onChange={e => updateCustomSection(i, 'title', e.target.value)}
+                          className="flex-1 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#C13584]"
+                        />
+                        <button type="button" onClick={() => removeSection(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer flex-shrink-0"><Trash2 size={16} /></button>
+                      </div>
+                      <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                        <Editor value={section.content} onChange={(e) => updateCustomSection(i, 'content', e.target.value)} containerProps={{ style: { minHeight: '10rem', resize: 'vertical' } }} />
+                      </div>
+                      <TemplateVarChips />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <button type="button" onClick={addCustomSection}
+                  className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer">
+                  + Adicionar Seção Manual
+                </button>
+                {sectionTemplates.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={templateToAdd}
+                      onChange={e => addTemplateSection(e.target.value)}
+                      className="border border-white/60 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-700"
+                    >
+                      <option value="">+ Adicionar de um Modelo...</option>
+                      {sectionTemplates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="mt-4 flex justify-between items-center gap-3 pt-6 border-t border-white/40">
               <div className="flex items-center gap-3">
                 {isEditing && (
@@ -2490,6 +2672,9 @@ function ProposalFormView({ proposalData, services, clients, onSave, onCancel, o
                   })()}
                 </section>
               )}
+
+              {/* Additional sections (linked templates or custom) — before Investment */}
+              <AdditionalSectionsRender sections={additionalSections} templates={sectionTemplates} rv={rv} />
 
               {/* 5 - Investment */}
               <section>
@@ -3005,6 +3190,194 @@ function ServiceFormView({ serviceData, onSave, onCancel }: { serviceData: Servi
             <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Serviço' : 'Salvar Serviço'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// SECTION TEMPLATES VIEW (reusable additional sections, e.g. GARANTIA E SUPORTE)
+// -------------------------------------------------------------
+function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewModal, onEditTemplate }: {
+  sectionTemplates: SectionTemplate[];
+  proposals: { proposal: Proposal; client: Client | null }[];
+  refetch: () => void;
+  openNewModal: () => void;
+  onEditTemplate: (t: SectionTemplate) => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+
+  // How many proposals currently link to a given template
+  const usageCount = (templateId: string) =>
+    proposals.filter(p => (p.proposal.additional_sections || []).some(s => s.kind === 'template' && s.template_id === templateId)).length;
+
+  const handleDelete = async (id: string, title: string) => {
+    const uses = usageCount(id);
+    const warning = uses > 0
+      ? `\n\nAtenção: este modelo está vinculado a ${uses} proposta(s). Essas seções deixarão de aparecer (as personalizadas/desvinculadas não são afetadas).`
+      : '';
+    if (confirm(`Tem certeza que deseja apagar o modelo de seção "${title}"?${warning}`)) {
+      setIsDeleting(id);
+      await supabase.from('proposal_section_templates').delete().eq('id', id);
+      refetch();
+      setIsDeleting(null);
+    }
+  };
+
+  const handleDuplicate = async (t: SectionTemplate) => {
+    setIsDuplicating(t.id);
+    try {
+      const { error } = await supabase.from('proposal_section_templates').insert({
+        title: `${t.title} (cópia)`,
+        content: t.content,
+      });
+      if (error) throw error;
+      refetch();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao duplicar modelo de seção: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
+        <h3 className="font-semibold text-lg text-gray-800">Modelos de Seção</h3>
+        <p className="text-sm text-gray-500">Editar um modelo atualiza todas as propostas vinculadas.</p>
+      </div>
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+            <th className="p-4 pl-6 font-medium">Título</th>
+            <th className="p-4 font-medium">Prévia</th>
+            <th className="p-4 font-medium">Em uso</th>
+            <th className="p-4 pr-6 font-medium text-right">Ação</th>
+          </tr>
+        </thead>
+        <tbody className="text-sm">
+          {sectionTemplates.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="p-8 text-center text-gray-500">
+                Nenhum modelo de seção cadastrado ainda.
+                <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro modelo.</button>
+              </td>
+            </tr>
+          ) : (
+            sectionTemplates.map(t => {
+              const uses = usageCount(t.id);
+              return (
+                <tr key={t.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+                  <td className="p-4 pl-6 text-gray-800 font-medium align-top whitespace-nowrap">{t.title}</td>
+                  <td className="p-4 text-gray-500 align-top">
+                    <div className="line-clamp-2 max-w-md" dangerouslySetInnerHTML={{ __html: t.content || '<span class="italic">Sem conteúdo</span>' }} />
+                  </td>
+                  <td className="p-4 align-top">
+                    {uses > 0
+                      ? <span className="px-2.5 py-1 bg-pink-100/80 text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">{uses} proposta(s)</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="p-4 pr-6 text-right align-top">
+                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                      <button onClick={() => onEditTemplate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
+                        <Edit2 size={16} />
+                      </button>
+                      <button disabled={isDuplicating === t.id} onClick={() => handleDuplicate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Duplicar">
+                        {isDuplicating === t.id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+                      </button>
+                      <button disabled={isDeleting === t.id} onClick={() => handleDelete(t.id, t.title)} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
+                        {isDeleting === t.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// SECTION TEMPLATE FORM VIEW
+// -------------------------------------------------------------
+function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: {
+  templateData: SectionTemplate | null;
+  proposals: { proposal: Proposal; client: Client | null }[];
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const isEditing = !!templateData;
+  const [title, setTitle] = useState(templateData?.title || '');
+  const [content, setContent] = useState(templateData?.content || '');
+
+  const usageCount = isEditing
+    ? proposals.filter(p => (p.proposal.additional_sections || []).some(s => s.kind === 'template' && s.template_id === templateData!.id)).length
+    : 0;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (isEditing && templateData) {
+        const { error } = await supabase.from('proposal_section_templates')
+          .update({ title, content, updated_at: new Date().toISOString() })
+          .eq('id', templateData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('proposal_section_templates').insert({ title, content });
+        if (error) throw error;
+      }
+      onSave();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao salvar modelo de seção: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+      <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
+        <h3 className="font-semibold text-xl text-gray-800">
+          {isEditing ? 'Editar Modelo de Seção' : 'Novo Modelo de Seção'}
+        </h3>
+        <p className="text-sm text-gray-600 mt-1">Conteúdo reutilizável (ex: Garantia e Suporte). Ao salvar, atualiza em todas as propostas vinculadas.</p>
+      </div>
+
+      <div className="p-8">
+        {isEditing && usageCount > 0 && (
+          <div className="mb-6 flex items-center gap-2 p-4 rounded-xl text-sm bg-pink-50 text-[#C13584] border border-pink-200">
+            <AlertCircle size={18} />
+            <p>Este modelo está vinculado a <strong>{usageCount} proposta(s)</strong>. As alterações serão refletidas em todas elas (exceto nas que foram personalizadas/desvinculadas).</p>
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Título da Seção</label>
+            <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" placeholder="Ex: GARANTIA E SUPORTE" />
+          </div>
+          <div className="relative z-0">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+              <Editor value={content} onChange={(e) => setContent(e.target.value)} containerProps={{ style: { minHeight: '20rem', resize: 'vertical' } }} />
+            </div>
+            <TemplateVarChips />
+          </div>
+
+          <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
+            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+              {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}
             </button>
           </div>
         </form>

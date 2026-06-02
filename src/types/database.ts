@@ -40,6 +40,21 @@ export type ProposalPhase = {
   duration_days: number;
 };
 
+// Reusable additional section model (e.g. "GARANTIA E SUPORTE").
+export type SectionTemplate = {
+  id: string;
+  title: string;
+  content: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// A section attached to a proposal. Either a live link to a template
+// (auto-updates everywhere when the template changes) or a one-off custom copy.
+export type AdditionalSection =
+  | { kind: 'template'; template_id: string }
+  | { kind: 'custom'; title: string; content: string };
+
 export type Proposal = {
   id: string;
   client_id: string;
@@ -52,6 +67,7 @@ export type Proposal = {
   scope_text: string | null;
   investment_text: string | null;
   project_phases: ProposalPhase[] | null;
+  additional_sections: AdditionalSection[] | null;
   start_date: string | null;
   content_json: any | null;
   created_at: string;
@@ -106,8 +122,13 @@ export interface Database {
       };
       proposals: {
         Row: Proposal;
-        Insert: { id?: string; client_id: string; service_id?: string | null; service_type?: string; value: number; status?: ProposalStatus; vision_text?: string | null; engine_text?: string | null; scope_text?: string | null; investment_text?: string | null; project_phases?: any | null; start_date?: string | null; content_json?: any | null; created_at?: string; };
-        Update: { id?: string; client_id?: string; service_id?: string | null; service_type?: string; value?: number; status?: ProposalStatus; vision_text?: string | null; engine_text?: string | null; scope_text?: string | null; investment_text?: string | null; project_phases?: any | null; start_date?: string | null; content_json?: any | null; created_at?: string; };
+        Insert: { id?: string; client_id: string; service_id?: string | null; service_type?: string; value: number; status?: ProposalStatus; vision_text?: string | null; engine_text?: string | null; scope_text?: string | null; investment_text?: string | null; project_phases?: any | null; additional_sections?: any | null; start_date?: string | null; content_json?: any | null; created_at?: string; };
+        Update: { id?: string; client_id?: string; service_id?: string | null; service_type?: string; value?: number; status?: ProposalStatus; vision_text?: string | null; engine_text?: string | null; scope_text?: string | null; investment_text?: string | null; project_phases?: any | null; additional_sections?: any | null; start_date?: string | null; content_json?: any | null; created_at?: string; };
+      };
+      proposal_section_templates: {
+        Row: SectionTemplate;
+        Insert: { id?: string; title: string; content?: string | null; created_at?: string; updated_at?: string; };
+        Update: { id?: string; title?: string; content?: string | null; created_at?: string; updated_at?: string; };
       };
       cash_flow: {
         Row: CashFlow;

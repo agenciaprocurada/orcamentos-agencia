@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task } from '../types/database';
+import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate } from '../types/database';
 
 export function useSupabase() {
     const [proposals, setProposals] = useState<{ proposal: Proposal; client: Client | null }[]>([]);
@@ -9,6 +9,7 @@ export function useSupabase() {
     const [services, setServices] = useState<Service[]>([]);
     const [cashFlowCategories, setCashFlowCategories] = useState<CashFlowCategoryRecord[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [sectionTemplates, setSectionTemplates] = useState<SectionTemplate[]>([]);
     const [loading, setLoading] = useState(true);
 
     const loadAll = useCallback(async (showLoading: boolean) => {
@@ -45,6 +46,11 @@ export function useSupabase() {
             .select('*')
             .order('created_at', { ascending: false });
 
+        const { data: sectionTemplatesData } = await supabase
+            .from('proposal_section_templates')
+            .select('*')
+            .order('title', { ascending: true });
+
         if (propData) {
             const mapped = propData.map((p: any) => ({
                 proposal: { ...p, client: undefined },
@@ -57,6 +63,7 @@ export function useSupabase() {
         if (serviceData) setServices(serviceData as Service[]);
         if (categoriesData) setCashFlowCategories(categoriesData as CashFlowCategoryRecord[]);
         if (tasksData) setTasks(tasksData as Task[]);
+        if (sectionTemplatesData) setSectionTemplates(sectionTemplatesData as SectionTemplate[]);
 
         if (showLoading) setLoading(false);
     }, []);
@@ -65,5 +72,5 @@ export function useSupabase() {
     // Silent: refreshes data without triggering the loading spinner (keeps current view mounted)
     const silentRefetch = useCallback(() => loadAll(false), [loadAll]);
 
-    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, loading, refetch: fetchDashboardData, silentRefetch };
+    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, loading, refetch: fetchDashboardData, silentRefetch };
 }
