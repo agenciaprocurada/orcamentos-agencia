@@ -112,6 +112,7 @@ export type Contract = {
   signer_email: string | null;
   signer_values: Record<string, string> | null;
   signature_data: string | null;
+  agency_signature: string | null;
   signed_body: string | null;
   signed_at: string | null;
   signer_ip: string | null;
@@ -131,6 +132,7 @@ export type AgencySettings = {
   telefone: string | null;
   pix_key: string | null;
   pix_beneficiario: string | null;
+  signature_data: string | null;
   updated_at: string;
 };
 
@@ -198,8 +200,8 @@ export interface Database {
       };
       agency_settings: {
         Row: AgencySettings;
-        Insert: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; updated_at?: string; };
-        Update: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; updated_at?: string; };
+        Insert: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; signature_data?: string | null; updated_at?: string; };
+        Update: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; signature_data?: string | null; updated_at?: string; };
       };
       contracts: {
         Row: Contract;

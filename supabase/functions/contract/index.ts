@@ -92,7 +92,7 @@ async function readContract(token: string | null | undefined) {
   const { data, error } = await supabase
     .from("contracts")
     .select(
-      "id, proposal_id, title, body, merge_vars, signer_fields, brand, signer_name, signer_email, signer_values, status, signature_data, signed_body, signed_at, signer_ip, valid_until",
+      "id, proposal_id, title, body, merge_vars, signer_fields, brand, signer_name, signer_email, signer_values, status, signature_data, agency_signature, signed_body, signed_at, signer_ip, valid_until",
     )
     .eq("public_token", token)
     .maybeSingle();
@@ -232,6 +232,14 @@ Deno.serve(async (req) => {
       const ip = getClientIp(req);
       const userAgent = req.headers.get("user-agent") || "";
 
+      // Snapshot the agency signature at the moment the client signs.
+      const { data: agency } = await supabase
+        .from("agency_settings")
+        .select("signature_data")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       const { error: updErr } = await supabase
         .from("contracts")
         .update({
@@ -240,6 +248,7 @@ Deno.serve(async (req) => {
           signer_name: (signerName && signerName.trim()) || contract.signer_name,
           signer_email: (signerEmail && signerEmail.trim()) || contract.signer_email,
           signature_data: signatureData,
+          agency_signature: agency?.signature_data || null,
           signed_body: signedBody,
           signed_at: signedAt,
           signer_ip: ip,

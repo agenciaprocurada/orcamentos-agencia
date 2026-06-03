@@ -32,6 +32,7 @@ CREATE TABLE public.contracts (
     signer_values jsonb DEFAULT '{}'::jsonb,      -- values the client filled at signing
 
     signature_data text,                          -- base64 PNG of the drawn signature
+    agency_signature text,                        -- agency signature snapshot (added after the client signs)
     signed_body text,                             -- final resolved HTML, frozen at signing
     signed_at timestamp with time zone,
     signer_ip text,                               -- captured server-side by the Edge Function

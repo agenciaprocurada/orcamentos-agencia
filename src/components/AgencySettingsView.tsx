@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Building2, Save, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Building2, Save, Loader2, CheckCircle, AlertCircle, Upload, Trash2 } from 'lucide-react';
 import type { AgencySettings } from '../types/database';
 
 // Agency (CONTRATADA) legal data. Feeds the {{AGENCIA_*}} contract variables.
@@ -11,7 +11,7 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
   const [id, setId] = useState<string | null>(null);
   const [form, setForm] = useState({
     razao_social: '', cnpj: '', endereco: '', cidade: '', uf: '', email: '', telefone: '',
-    pix_key: '', pix_beneficiario: '',
+    pix_key: '', pix_beneficiario: '', signature_data: '',
   });
 
   useEffect(() => {
@@ -29,6 +29,7 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
           razao_social: a.razao_social || '', cnpj: a.cnpj || '', endereco: a.endereco || '',
           cidade: a.cidade || '', uf: a.uf || '', email: a.email || '', telefone: a.telefone || '',
           pix_key: a.pix_key || '', pix_beneficiario: a.pix_beneficiario || '',
+          signature_data: a.signature_data || '',
         });
       }
       setLoading(false);
@@ -36,6 +37,18 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
   }, []);
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setMessage({ type: 'error', text: 'Selecione um arquivo de imagem (PNG/JPG).' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => set('signature_data', String(reader.result || ''));
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +143,26 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
                 <input type="text" value={form.pix_beneficiario} onChange={e => set('pix_beneficiario', e.target.value)} className={fieldClass} placeholder="Nome do titular da conta" />
               </div>
             </div>
+          </div>
+
+          <div className="border-t border-white/50 pt-5 mt-1">
+            <p className="text-sm font-bold text-gray-700 mb-1">Assinatura da Agência (CONTRATADA)</p>
+            <p className="text-xs text-gray-500 mb-3">Aplicada ao contrato automaticamente <strong>após o cliente assinar</strong>. Envie uma imagem da assinatura (PNG com fundo transparente de preferência).</p>
+            {form.signature_data ? (
+              <div className="flex items-center gap-4">
+                <div className="border border-gray-200 rounded-xl bg-white p-3 flex items-center justify-center">
+                  <img src={form.signature_data} alt="Assinatura da agência" className="max-h-24" />
+                </div>
+                <button type="button" onClick={() => set('signature_data', '')} className="flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg cursor-pointer">
+                  <Trash2 size={16} /> Remover
+                </button>
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-[#C13584] px-4 py-2.5 border border-[#C13584]/30 rounded-xl bg-white/60 hover:bg-white/80 cursor-pointer">
+                <Upload size={16} /> Enviar imagem da assinatura
+                <input type="file" accept="image/*" onChange={handleSignatureUpload} className="hidden" />
+              </label>
+            )}
           </div>
 
           <button type="submit" disabled={saving}

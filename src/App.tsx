@@ -3625,11 +3625,22 @@ function ContractPrintDocument({ contract }: { contract: Contract }) {
       <div className="mt-12 pt-6 border-t border-gray-200">
         {contract.status === 'signed' ? (
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Assinatura do Contratante</p>
-            {contract.signature_data && (
-              <img src={contract.signature_data} alt="Assinatura" style={{ maxHeight: '120px' }} />
-            )}
-            <p className="mt-1 font-semibold text-gray-800">{contract.signer_name || ''}</p>
+            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '220px' }}>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Contratante</p>
+                {contract.signature_data && (
+                  <img src={contract.signature_data} alt="Assinatura do contratante" style={{ maxHeight: '110px' }} />
+                )}
+                <p className="mt-1 font-semibold text-gray-800 border-t border-gray-300 pt-1">{contract.signer_name || ''}</p>
+              </div>
+              {contract.agency_signature && (
+                <div style={{ flex: 1, minWidth: '220px' }}>
+                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Contratada</p>
+                  <img src={contract.agency_signature} alt="Assinatura da contratada" style={{ maxHeight: '110px' }} />
+                  <p className="mt-1 font-semibold text-gray-800 border-t border-gray-300 pt-1">{vars.AGENCIA_RAZAO_SOCIAL || contractBrandLabel(contract.brand)}</p>
+                </div>
+              )}
+            </div>
             <div className="mt-4 text-xs text-gray-500 leading-relaxed">
               <p>Assinado eletronicamente em <strong>{contract.signed_at ? fmtContractDateTime(contract.signed_at) : ''}</strong></p>
               <p>Endereço IP: <strong>{contract.signer_ip || '—'}</strong></p>

@@ -333,10 +333,19 @@ export function ContractSigningView({ token }: { token: string }) {
 
           {isSigned ? (
             <div className="mt-3">
-              <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 flex items-center justify-center">
-                {contract.signature_data
-                  ? <img src={contract.signature_data} alt="Assinatura" className="max-h-32" />
-                  : <span className="text-gray-400 text-sm">Assinatura registrada</span>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[8rem]">
+                  {contract.signature_data
+                    ? <img src={contract.signature_data} alt="Assinatura do contratante" className="max-h-24" />
+                    : <span className="text-gray-400 text-sm">Assinatura registrada</span>}
+                  <span className="mt-2 text-xs text-gray-400 uppercase tracking-wider">Contratante</span>
+                </div>
+                {contract.agency_signature && (
+                  <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[8rem]">
+                    <img src={contract.agency_signature} alt="Assinatura da contratada" className="max-h-24" />
+                    <span className="mt-2 text-xs text-gray-400 uppercase tracking-wider">Contratada</span>
+                  </div>
+                )}
               </div>
               <div className="mt-4 flex items-center gap-2 p-4 rounded-xl bg-green-50 text-green-700 text-sm">
                 <CheckCircle size={18} className="flex-shrink-0" />
