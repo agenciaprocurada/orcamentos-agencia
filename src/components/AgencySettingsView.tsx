@@ -11,6 +11,7 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
   const [id, setId] = useState<string | null>(null);
   const [form, setForm] = useState({
     razao_social: '', cnpj: '', endereco: '', cidade: '', uf: '', email: '', telefone: '',
+    pix_key: '', pix_beneficiario: '',
   });
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
         setForm({
           razao_social: a.razao_social || '', cnpj: a.cnpj || '', endereco: a.endereco || '',
           cidade: a.cidade || '', uf: a.uf || '', email: a.email || '', telefone: a.telefone || '',
+          pix_key: a.pix_key || '', pix_beneficiario: a.pix_beneficiario || '',
         });
       }
       setLoading(false);
@@ -113,6 +115,20 @@ export function AgencySettingsView({ onSaved }: { onSaved?: () => void }) {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Telefone <span className="font-mono text-xs text-[#C13584]">{'{{AGENCIA_TELEFONE}}'}</span></label>
               <input type="text" value={form.telefone} onChange={e => set('telefone', e.target.value)} className={fieldClass} placeholder="(51) 99999-9999" />
+            </div>
+          </div>
+
+          <div className="border-t border-white/50 pt-5 mt-1">
+            <p className="text-sm font-bold text-gray-700 mb-3">Pagamento via PIX</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Chave PIX <span className="font-mono text-xs text-[#C13584]">{'{{CHAVE_PIX}}'}</span></label>
+                <input type="text" value={form.pix_key} onChange={e => set('pix_key', e.target.value)} className={fieldClass} placeholder="CNPJ, e-mail, telefone ou chave aleatória" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Beneficiário <span className="font-mono text-xs text-[#C13584]">{'{{BENEFICIARIO_PIX}}'}</span></label>
+                <input type="text" value={form.pix_beneficiario} onChange={e => set('pix_beneficiario', e.target.value)} className={fieldClass} placeholder="Nome do titular da conta" />
+              </div>
             </div>
           </div>
 

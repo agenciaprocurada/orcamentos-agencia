@@ -582,6 +582,7 @@ const CONTRACT_TEMPLATE_VARS = [
   { key: 'CONDICAO_PAGAMENTO', label: 'Condição de Pagamento' },
   { key: 'FORMA_PAGAMENTO', label: 'Forma de Pagamento' },
   { key: 'PARCELAS', label: 'Tabela de Parcelas' },
+  { key: 'PAGAMENTO_PIX', label: 'Parágrafo PIX' },
   { key: 'DATA_INICIO', label: 'Data Início' },
   { key: 'NUM_PARCELAS', label: 'Nº Parcelas' },
   { key: 'DATA_HOJE', label: 'Data Hoje' },
@@ -596,6 +597,8 @@ const AGENCY_TEMPLATE_VARS = [
   { key: 'AGENCIA_UF', label: 'UF' },
   { key: 'AGENCIA_EMAIL', label: 'E-mail Agência' },
   { key: 'AGENCIA_TELEFONE', label: 'Telefone' },
+  { key: 'CHAVE_PIX', label: 'Chave PIX' },
+  { key: 'BENEFICIARIO_PIX', label: 'Beneficiário PIX' },
 ];
 
 function buildAgencyVarMap(agency: AgencySettings | null): Record<string, string> {
@@ -607,6 +610,8 @@ function buildAgencyVarMap(agency: AgencySettings | null): Record<string, string
     AGENCIA_UF: agency?.uf || '',
     AGENCIA_EMAIL: agency?.email || '',
     AGENCIA_TELEFONE: agency?.telefone || '',
+    CHAVE_PIX: agency?.pix_key || '',
+    BENEFICIARIO_PIX: agency?.pix_beneficiario || '',
   };
 }
 
@@ -3827,11 +3832,19 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
     : `O valor total de ${baseVars.VALOR_BRUTO} será pago em ${baseVars.NUM_PARCELAS} parcela(s), conforme as condições da proposta comercial aprovada.`;
   // CONDICAO_PAGAMENTO embeds the installments table when parcelado.
   const condicaoPagamento = condicaoSentence + parcelasHtml;
+  // PIX payment paragraph: full value when à vista, down payment when parcelado.
+  const pixKey = agencySettings?.pix_key || '';
+  const pixBenef = agencySettings?.pix_beneficiario || '';
+  const pixSuffix = pixBenef ? ` (titular: ${pixBenef})` : '';
+  const pagamentoPix = (!picked || !pixKey) ? '' : paymentMethod === 'avista'
+    ? `O pagamento do valor integral de ${baseVars.VALOR_AVISTA} deverá ser realizado via PIX para a chave ${pixKey}${pixSuffix}.`
+    : `O pagamento da entrada (1ª parcela) deverá ser realizado via PIX para a chave ${pixKey}${pixSuffix}.`;
   const mergeVars = {
     ...baseVars,
     CONDICAO_PAGAMENTO: condicaoPagamento,
     FORMA_PAGAMENTO: paymentMethod === 'avista' ? 'à vista' : 'parcelado',
     PARCELAS: parcelasHtml,
+    PAGAMENTO_PIX: pagamentoPix,
   };
   const previewBody = template ? resolveVars(template.body || '', mergeVars) : '';
   const signerFields = (template?.signer_fields as SignerField[]) || [];

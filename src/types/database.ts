@@ -129,6 +129,8 @@ export type AgencySettings = {
   uf: string | null;
   email: string | null;
   telefone: string | null;
+  pix_key: string | null;
+  pix_beneficiario: string | null;
   updated_at: string;
 };
 
@@ -196,8 +198,8 @@ export interface Database {
       };
       agency_settings: {
         Row: AgencySettings;
-        Insert: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; updated_at?: string; };
-        Update: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; updated_at?: string; };
+        Insert: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; updated_at?: string; };
+        Update: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; pix_key?: string | null; pix_beneficiario?: string | null; updated_at?: string; };
       };
       contracts: {
         Row: Contract;

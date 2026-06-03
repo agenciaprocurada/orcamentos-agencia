@@ -10,6 +10,8 @@ CREATE TABLE public.agency_settings (
     uf text,
     email text,
     telefone text,
+    pix_key text,
+    pix_beneficiario text,
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
