@@ -578,8 +578,10 @@ const CONTRACT_TEMPLATE_VARS = [
   { key: 'SERVICO', label: 'Serviço' },
   { key: 'VALOR_BRUTO', label: 'Valor Bruto' },
   { key: 'VALOR_LIQUIDO', label: 'Valor Líquido' },
+  { key: 'VALOR_AVISTA', label: 'Valor à Vista (Especial)' },
   { key: 'CONDICAO_PAGAMENTO', label: 'Condição de Pagamento' },
   { key: 'FORMA_PAGAMENTO', label: 'Forma de Pagamento' },
+  { key: 'PARCELAS', label: 'Tabela de Parcelas' },
   { key: 'DATA_INICIO', label: 'Data Início' },
   { key: 'NUM_PARCELAS', label: 'Nº Parcelas' },
   { key: 'DATA_HOJE', label: 'Data Hoje' },
@@ -608,11 +610,33 @@ function buildAgencyVarMap(agency: AgencySettings | null): Record<string, string
   };
 }
 
+// Build an HTML table of the proposal's installments (date + value) for contracts.
+function buildInstallmentsHtml(installments: { date: string; value: number }[] | undefined): string {
+  if (!installments || installments.length === 0) return '';
+  const fmt = (v: number) => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  const cell = 'padding:6px 10px;border:1px solid #ddd;';
+  const rows = installments.map((p, i) =>
+    `<tr><td style="${cell}">${i + 1}ª</td><td style="${cell}">${new Date(p.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td><td style="${cell}text-align:right;">${fmt(p.value)}</td></tr>`
+  ).join('');
+  const total = installments.reduce((a, b) => a + (Number(b.value) || 0), 0);
+  return `<table style="border-collapse:collapse;width:100%;font-size:13px;margin:8px 0;">`
+    + `<thead><tr>`
+    + `<th style="${cell}text-align:left;">Parcela</th>`
+    + `<th style="${cell}text-align:left;">Vencimento</th>`
+    + `<th style="${cell}text-align:right;">Valor</th>`
+    + `</tr></thead><tbody>${rows}</tbody>`
+    + `<tfoot><tr><td colspan="2" style="${cell}font-weight:bold;">Total</td><td style="${cell}text-align:right;font-weight:bold;">${fmt(total)}</td></tr></tfoot>`
+    + `</table>`;
+}
+
 // Build the proposal-derived merge variables for a contract.
 function buildProposalVarMap(proposal: Proposal, client: Client | null): Record<string, string> {
   const content = proposal.content_json as Record<string, unknown> | null;
   const netValue = (content?.netValue as number) ?? Number(proposal.value);
   const installments = (content?.installments as unknown[]) || [];
+  // Special upfront ("à vista") price from the proposal; falls back to net value.
+  const upfrontNum = parseFloat(String((content?.upfrontPrice as string) || '').replace(',', '.')) || 0;
+  const avistaValue = upfrontNum > 0 ? upfrontNum : netValue;
   return {
     NOME_CLIENTE: client?.name || '',
     EMPRESA_CLIENTE: client?.company_name || '',
@@ -626,6 +650,7 @@ function buildProposalVarMap(proposal: Proposal, client: Client | null): Record<
     SERVICO: proposal.service_type || '',
     VALOR_BRUTO: `R$ ${Number(proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     VALOR_LIQUIDO: `R$ ${Number(netValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    VALOR_AVISTA: `R$ ${Number(avistaValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     DATA_INICIO: proposal.start_date ? new Date(proposal.start_date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
     NUM_PARCELAS: String(installments.length || 1),
     DATA_HOJE: new Date().toLocaleDateString('pt-BR'),
@@ -3793,14 +3818,20 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
   const baseVars = picked
     ? { ...buildProposalVarMap(picked.proposal, picked.client), ...buildAgencyVarMap(agencySettings) }
     : buildAgencyVarMap(agencySettings);
+  // Installments from the proposal, used when payment is "parcelado".
+  const proposalInstallments = (picked?.proposal.content_json as Record<string, unknown> | null)?.installments as { date: string; value: number }[] | undefined;
+  const parcelasHtml = paymentMethod === 'parcelado' ? buildInstallmentsHtml(proposalInstallments) : '';
   // Payment condition clause derived from the selected method.
-  const condicaoPagamento = !picked ? '' : paymentMethod === 'avista'
-    ? `O valor total de ${baseVars.VALOR_LIQUIDO} deverá ser pago à vista, no prazo de até 7 (sete) dias a contar da assinatura deste contrato.`
+  const condicaoSentence = !picked ? '' : paymentMethod === 'avista'
+    ? `O valor total de ${baseVars.VALOR_AVISTA} deverá ser pago à vista, no prazo de até 7 (sete) dias a contar da assinatura deste contrato.`
     : `O valor total de ${baseVars.VALOR_BRUTO} será pago em ${baseVars.NUM_PARCELAS} parcela(s), conforme as condições da proposta comercial aprovada.`;
+  // CONDICAO_PAGAMENTO embeds the installments table when parcelado.
+  const condicaoPagamento = condicaoSentence + parcelasHtml;
   const mergeVars = {
     ...baseVars,
     CONDICAO_PAGAMENTO: condicaoPagamento,
     FORMA_PAGAMENTO: paymentMethod === 'avista' ? 'à vista' : 'parcelado',
+    PARCELAS: parcelasHtml,
   };
   const previewBody = template ? resolveVars(template.body || '', mergeVars) : '';
   const signerFields = (template?.signer_fields as SignerField[]) || [];
@@ -3951,7 +3982,12 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
           {picked && (
             <div className="p-3 rounded-xl bg-white/30 border border-white/50 text-sm text-gray-600">
               <span className="font-medium text-gray-700">Condição que entrará no contrato: </span>
-              {condicaoPagamento}
+              {condicaoSentence}
+              {paymentMethod === 'parcelado' && (
+                parcelasHtml
+                  ? <span className="text-gray-500"> + tabela com {proposalInstallments?.length} parcela(s).</span>
+                  : <span className="text-amber-600"> (Atenção: esta proposta não tem parcelas geradas — a tabela ficará vazia.)</span>
+              )}
             </div>
           )}
 
