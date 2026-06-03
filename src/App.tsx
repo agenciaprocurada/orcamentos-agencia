@@ -484,7 +484,7 @@ function App() {
 
       {/* Global print document — always in DOM, only shown at print time */}
       {printProposal && <ProposalPrintDocument proposal={printProposal.proposal} client={printProposal.client} sectionTemplates={sectionTemplates} />}
-      {printContract && <ContractPrintDocument contract={printContract} />}
+      {printContract && <ContractPrintDocument contract={printContract} agencySettings={agencySettings} />}
     </div>
   );
 }
@@ -3593,10 +3593,28 @@ const fmtContractDateTime = (iso: string) =>
 // -------------------------------------------------------------
 // CONTRACT PRINT DOCUMENT (PDF) — includes signature, date/time and IP
 // -------------------------------------------------------------
-function ContractPrintDocument({ contract }: { contract: Contract }) {
+function ContractPrintDocument({ contract, agencySettings }: { contract: Contract; agencySettings: AgencySettings | null }) {
   const vars: Record<string, string> = { ...(contract.merge_vars as Record<string, string> || {}), ...(contract.signer_values as Record<string, string> || {}) };
   const body = contract.signed_body || resolveVars(contract.body || '', vars);
   const propId = contract.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+
+  // Agency signature: snapshot frozen at signing, falling back to the current
+  // one for contracts signed before the signature was configured.
+  const agencySig = contract.agency_signature || agencySettings?.signature_data || '';
+  const agRazao = vars.AGENCIA_RAZAO_SOCIAL || agencySettings?.razao_social || contractBrandLabel(contract.brand);
+  const agCnpj = vars.AGENCIA_CNPJ || agencySettings?.cnpj || '';
+  const agEndereco = vars.AGENCIA_ENDERECO || agencySettings?.endereco || '';
+  const agCidade = vars.AGENCIA_CIDADE || agencySettings?.cidade || '';
+  const agUf = vars.AGENCIA_UF || agencySettings?.uf || '';
+
+  // Contratante (client) data resolved from the contract variables.
+  const cliCpf = vars.CPF || '';
+  const cliCnpj = vars.CNPJ_CLIENTE || '';
+  const cliEmpresa = vars.EMPRESA_CLIENTE || '';
+  const cliCidade = vars.CIDADE_CLIENTE || '';
+  const cliUf = vars.ESTADO_CLIENTE || '';
+  const cliEmail = vars.EMAIL_CLIENTE || '';
+  const cliTelefone = vars.TELEFONE_CLIENTE || '';
 
   return (
     <div className="hidden print:block w-full bg-white text-black font-sans leading-relaxed">
@@ -3622,31 +3640,47 @@ function ContractPrintDocument({ contract }: { contract: Contract }) {
       <div className="text-sm text-gray-800 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: body }} />
 
       {/* Signature block */}
-      <div className="mt-12 pt-6 border-t border-gray-200">
+      <div style={{ marginTop: '48px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
         {contract.status === 'signed' ? (
-          <div>
-            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '220px' }}>
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Contratante</p>
-                {contract.signature_data && (
-                  <img src={contract.signature_data} alt="Assinatura do contratante" style={{ maxHeight: '110px' }} />
-                )}
-                <p className="mt-1 font-semibold text-gray-800 border-t border-gray-300 pt-1">{contract.signer_name || ''}</p>
+          <>
+            <div style={{ display: 'flex', gap: '40px', alignItems: 'flex-start' }}>
+              {/* Contratante */}
+              <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                <p style={{ fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6b7280', marginBottom: '6px' }}>Contratante</p>
+                <div style={{ height: '64px', display: 'flex', alignItems: 'flex-end' }}>
+                  {contract.signature_data && <img src={contract.signature_data} alt="Assinatura do contratante" style={{ maxHeight: '64px', maxWidth: '100%' }} />}
+                </div>
+                <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '4px', marginTop: '2px', fontSize: '11px', color: '#4b5563', lineHeight: 1.5, wordBreak: 'break-word' }}>
+                  <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '13px' }}>{contract.signer_name || ''}</p>
+                  {cliEmpresa && <p>{cliEmpresa}</p>}
+                  {cliCpf && <p>CPF: {cliCpf}</p>}
+                  {cliCnpj && <p>CNPJ: {cliCnpj}</p>}
+                  {(cliCidade || cliUf) && <p>{[cliCidade, cliUf].filter(Boolean).join(' / ')}</p>}
+                  {cliEmail && <p>{cliEmail}</p>}
+                  {cliTelefone && <p>{cliTelefone}</p>}
+                </div>
               </div>
-              {contract.agency_signature && (
-                <div style={{ flex: 1, minWidth: '220px' }}>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Contratada</p>
-                  <img src={contract.agency_signature} alt="Assinatura da contratada" style={{ maxHeight: '110px' }} />
-                  <p className="mt-1 font-semibold text-gray-800 border-t border-gray-300 pt-1">{vars.AGENCIA_RAZAO_SOCIAL || contractBrandLabel(contract.brand)}</p>
+              {/* Contratada */}
+              {agencySig && (
+                <div style={{ flex: '1 1 0', minWidth: 0 }}>
+                  <p style={{ fontSize: '11px', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#6b7280', marginBottom: '6px' }}>Contratada</p>
+                  <div style={{ height: '64px', display: 'flex', alignItems: 'flex-end' }}>
+                    <img src={agencySig} alt="Assinatura da contratada" style={{ maxHeight: '64px', maxWidth: '100%' }} />
+                  </div>
+                  <div style={{ borderTop: '1px solid #9ca3af', paddingTop: '4px', marginTop: '2px', fontSize: '11px', color: '#4b5563', lineHeight: 1.5, wordBreak: 'break-word' }}>
+                    <p style={{ fontWeight: 700, color: '#1f2937', fontSize: '13px' }}>{agRazao}</p>
+                    {agCnpj && <p>CNPJ: {agCnpj}</p>}
+                    {agEndereco && <p>{agEndereco}</p>}
+                    {(agCidade || agUf) && <p>{[agCidade, agUf].filter(Boolean).join(' / ')}</p>}
+                    {contract.signed_at && <p>Assinado em {fmtContractDateTime(contract.signed_at)}</p>}
+                  </div>
                 </div>
               )}
             </div>
-            <div className="mt-4 text-xs text-gray-500 leading-relaxed">
-              <p>Assinado eletronicamente em <strong>{contract.signed_at ? fmtContractDateTime(contract.signed_at) : ''}</strong></p>
-              <p>Endereço IP: <strong>{contract.signer_ip || '—'}</strong></p>
-              <p>Identificador do documento: <strong className="font-mono">#{propId}</strong></p>
-            </div>
-          </div>
+            <p style={{ marginTop: '24px', paddingTop: '10px', borderTop: '1px solid #f3f4f6', fontSize: '10px', color: '#9ca3af', textAlign: 'center' }}>
+              Documento assinado eletronicamente em {contract.signed_at ? fmtContractDateTime(contract.signed_at) : ''} · IP {contract.signer_ip || '—'} · Identificador #{propId}
+            </p>
+          </>
         ) : (
           <p className="text-sm text-gray-400 italic">Contrato ainda não assinado.</p>
         )}

@@ -100,6 +100,18 @@ async function readContract(token: string | null | undefined) {
   if (error) return json({ error: error.message }, 500);
   if (!data) return json({ error: "Contrato não encontrado." });
 
+  // Fallback: if a signed contract has no frozen agency signature (signed before
+  // it was configured), show the current agency signature.
+  if (!data.agency_signature) {
+    const { data: ag } = await supabase
+      .from("agency_settings")
+      .select("signature_data")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (ag?.signature_data) data.agency_signature = ag.signature_data;
+  }
+
   // Current CRM client data so the page can pre-fill and request missing fields.
   let client: Record<string, unknown> | null = null;
   if (data.proposal_id) {
