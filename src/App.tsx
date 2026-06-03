@@ -25,22 +25,31 @@ import {
   GripVertical,
   Layers,
   Link2,
-  Unlink
+  Unlink,
+  FileSignature,
+  Download,
+  ScrollText,
+  ExternalLink
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
 import { TasksView } from './components/TasksView';
+import { ContractSigningView } from './components/ContractSigningView';
+import { AgencySettingsView } from './components/AgencySettingsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
-import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection } from './types/database';
+import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection, Contract, ContractTemplate, SignerField, AgencySettings } from './types/database';
 import type { User } from '@supabase/supabase-js';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSectionTemplate, setSelectedSectionTemplate] = useState<SectionTemplate | null>(null);
+  const [selectedContractTemplate, setSelectedContractTemplate] = useState<ContractTemplate | null>(null);
+  const [contractProposalTarget, setContractProposalTarget] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
+  const [printContract, setPrintContract] = useState<Contract | null>(null);
   const [selectedCashFlow, setSelectedCashFlow] = useState<CashFlow | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [approvalTarget, setApprovalTarget] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
@@ -64,13 +73,19 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch, silentRefetch } = useSupabase();
 
   useEffect(() => {
     if (user?.id) {
       refetch();
     }
   }, [refetch, user?.id]);
+
+  // Public contract signing page: /assinar/<token> — bypasses admin auth.
+  const signMatch = window.location.pathname.match(/^\/assinar\/([^/?#]+)/);
+  if (signMatch) {
+    return <ContractSigningView token={decodeURIComponent(signMatch[1])} />;
+  }
 
   // Modal States - removing as we are using page forms
 
@@ -182,6 +197,13 @@ function App() {
               Modelos de Seção
             </button>
             <button
+              onClick={() => setActiveTab('contracts')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab) ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
+            >
+              <FileSignature size={20} />
+              Contratos
+            </button>
+            <button
               onClick={() => setActiveTab('clients')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'clients' || activeTab === 'client-form' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
             >
@@ -235,7 +257,11 @@ function App() {
                                     activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
                                       activeTab === 'section-templates' ? 'Modelos de Seção' :
                                         activeTab === 'section-template-form' ? (selectedSectionTemplate ? 'Editar Modelo de Seção' : 'Novo Modelo de Seção') :
-                                          activeTab === 'settings' ? 'Configurações' : ''}
+                                          activeTab === 'contracts' ? 'Contratos' :
+                                            activeTab === 'contract-form' ? 'Gerar Contrato' :
+                                              activeTab === 'contract-templates' ? 'Modelos de Contrato' :
+                                                activeTab === 'contract-template-form' ? (selectedContractTemplate ? 'Editar Modelo de Contrato' : 'Novo Modelo de Contrato') :
+                                                  activeTab === 'settings' ? 'Configurações' : ''}
             </h2>
             <div className="flex items-center gap-4">
               {activeTab === 'proposals' && (
@@ -267,6 +293,18 @@ function App() {
               )}
               {activeTab === 'section-templates' && (
                 <button onClick={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                  <Plus size={18} />
+                  Novo Modelo
+                </button>
+              )}
+              {activeTab === 'contracts' && (
+                <button onClick={() => setActiveTab('contract-templates')} className="border border-[#C13584]/30 text-[#C13584] bg-white hover:bg-pink-50 cursor-pointer px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                  <ScrollText size={18} />
+                  Modelos de Contrato
+                </button>
+              )}
+              {activeTab === 'contract-templates' && (
+                <button onClick={() => { setSelectedContractTemplate(null); setActiveTab('contract-template-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
                   <Plus size={18} />
                   Novo Modelo
                 </button>
@@ -306,6 +344,7 @@ function App() {
                         document.title = prev;
                       }, 100);
                     }}
+                    onGenerateContract={(p) => { setContractProposalTarget(p); setActiveTab('contract-form'); }}
                   />
                 )}
                 {activeTab === 'proposal-form' && (
@@ -365,6 +404,51 @@ function App() {
                     onCancel={() => setActiveTab('section-templates')}
                   />
                 )}
+                {activeTab === 'contracts' && (
+                  <ContractsView
+                    contracts={contracts}
+                    proposals={proposals}
+                    refetch={refetch}
+                    onDownloadPdf={(c) => {
+                      setPrintContract(c);
+                      const num = c.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+                      setTimeout(() => {
+                        const prev = document.title;
+                        document.title = `Contrato_${num}`;
+                        window.print();
+                        document.title = prev;
+                      }, 120);
+                    }}
+                  />
+                )}
+                {activeTab === 'contract-form' && (
+                  <ContractFormView
+                    proposalData={contractProposalTarget}
+                    proposals={proposals}
+                    contractTemplates={contractTemplates}
+                    agencySettings={agencySettings}
+                    onSave={() => { setActiveTab('contracts'); refetch(); }}
+                    onCancel={() => setActiveTab('contracts')}
+                  />
+                )}
+                {activeTab === 'contract-templates' && (
+                  <ContractTemplatesView
+                    contractTemplates={contractTemplates}
+                    contracts={contracts}
+                    refetch={refetch}
+                    openNewModal={() => { setSelectedContractTemplate(null); setActiveTab('contract-template-form'); }}
+                    onEditTemplate={(t) => { setSelectedContractTemplate(t); setActiveTab('contract-template-form'); }}
+                    onBack={() => setActiveTab('contracts')}
+                  />
+                )}
+                {activeTab === 'contract-template-form' && (
+                  <ContractTemplateFormView
+                    templateData={selectedContractTemplate}
+                    contracts={contracts}
+                    onSave={() => { setActiveTab('contract-templates'); refetch(); }}
+                    onCancel={() => setActiveTab('contract-templates')}
+                  />
+                )}
                 {activeTab === 'clients' && (
                   <ClientsView
                     clients={clients}
@@ -379,7 +463,12 @@ function App() {
                     onCancel={() => setActiveTab('clients')}
                   />
                 )}
-                {activeTab === 'settings' && <SettingsView />}
+                {activeTab === 'settings' && (
+                  <div className="max-w-xl mx-auto flex flex-col gap-6">
+                    <AgencySettingsView onSaved={refetch} />
+                    <SettingsView />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -395,6 +484,7 @@ function App() {
 
       {/* Global print document — always in DOM, only shown at print time */}
       {printProposal && <ProposalPrintDocument proposal={printProposal.proposal} client={printProposal.client} sectionTemplates={sectionTemplates} />}
+      {printContract && <ContractPrintDocument contract={printContract} />}
     </div>
   );
 }
@@ -472,6 +562,75 @@ const TEMPLATE_VARS = [
   { key: 'NUM_PARCELAS', label: 'Nº Parcelas' },
   { key: 'DATA_HOJE', label: 'Data Hoje' },
 ];
+
+// Variables available in contract templates (proposal-derived). Signer fields
+// add their own variables (the field key) on top of these.
+const CONTRACT_TEMPLATE_VARS = [
+  { key: 'NOME_CLIENTE', label: 'Nome do Cliente' },
+  { key: 'EMPRESA_CLIENTE', label: 'Empresa' },
+  { key: 'EMAIL_CLIENTE', label: 'E-mail' },
+  { key: 'CNPJ_CLIENTE', label: 'CNPJ do Cliente' },
+  { key: 'TELEFONE_CLIENTE', label: 'Telefone do Cliente' },
+  { key: 'CIDADE_CLIENTE', label: 'Cidade do Cliente' },
+  { key: 'ESTADO_CLIENTE', label: 'Estado/UF do Cliente' },
+  { key: 'NUMERO_PROPOSTA', label: 'Nº da Proposta' },
+  { key: 'DATA_PROPOSTA', label: 'Data da Proposta' },
+  { key: 'SERVICO', label: 'Serviço' },
+  { key: 'VALOR_BRUTO', label: 'Valor Bruto' },
+  { key: 'VALOR_LIQUIDO', label: 'Valor Líquido' },
+  { key: 'CONDICAO_PAGAMENTO', label: 'Condição de Pagamento' },
+  { key: 'FORMA_PAGAMENTO', label: 'Forma de Pagamento' },
+  { key: 'DATA_INICIO', label: 'Data Início' },
+  { key: 'NUM_PARCELAS', label: 'Nº Parcelas' },
+  { key: 'DATA_HOJE', label: 'Data Hoje' },
+];
+
+// Agency (CONTRATADA) variables — defined once in Settings, injected into contracts.
+const AGENCY_TEMPLATE_VARS = [
+  { key: 'AGENCIA_RAZAO_SOCIAL', label: 'Razão Social' },
+  { key: 'AGENCIA_CNPJ', label: 'CNPJ' },
+  { key: 'AGENCIA_ENDERECO', label: 'Endereço' },
+  { key: 'AGENCIA_CIDADE', label: 'Cidade' },
+  { key: 'AGENCIA_UF', label: 'UF' },
+  { key: 'AGENCIA_EMAIL', label: 'E-mail Agência' },
+  { key: 'AGENCIA_TELEFONE', label: 'Telefone' },
+];
+
+function buildAgencyVarMap(agency: AgencySettings | null): Record<string, string> {
+  return {
+    AGENCIA_RAZAO_SOCIAL: agency?.razao_social || '',
+    AGENCIA_CNPJ: agency?.cnpj || '',
+    AGENCIA_ENDERECO: agency?.endereco || '',
+    AGENCIA_CIDADE: agency?.cidade || '',
+    AGENCIA_UF: agency?.uf || '',
+    AGENCIA_EMAIL: agency?.email || '',
+    AGENCIA_TELEFONE: agency?.telefone || '',
+  };
+}
+
+// Build the proposal-derived merge variables for a contract.
+function buildProposalVarMap(proposal: Proposal, client: Client | null): Record<string, string> {
+  const content = proposal.content_json as Record<string, unknown> | null;
+  const netValue = (content?.netValue as number) ?? Number(proposal.value);
+  const installments = (content?.installments as unknown[]) || [];
+  return {
+    NOME_CLIENTE: client?.name || '',
+    EMPRESA_CLIENTE: client?.company_name || '',
+    EMAIL_CLIENTE: client?.email || '',
+    CNPJ_CLIENTE: client?.cnpj || '',
+    TELEFONE_CLIENTE: client?.phone || client?.whatsapp || '',
+    CIDADE_CLIENTE: client?.city || '',
+    ESTADO_CLIENTE: client?.state || '',
+    NUMERO_PROPOSTA: proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase(),
+    DATA_PROPOSTA: new Date(proposal.created_at).toLocaleDateString('pt-BR'),
+    SERVICO: proposal.service_type || '',
+    VALOR_BRUTO: `R$ ${Number(proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    VALOR_LIQUIDO: `R$ ${Number(netValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    DATA_INICIO: proposal.start_date ? new Date(proposal.start_date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
+    NUM_PARCELAS: String(installments.length || 1),
+    DATA_HOJE: new Date().toLocaleDateString('pt-BR'),
+  };
+}
 
 function resolveVars(html: string, vars: Record<string, string>): string {
   if (!html) return html;
@@ -1201,12 +1360,13 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
 // -------------------------------------------------------------
 // PROPOSALS VIEW
 // -------------------------------------------------------------
-function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, onPrintProposal }: {
+function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, onPrintProposal, onGenerateContract }: {
   proposals: { proposal: Proposal; client: Client | null }[];
   refetch: () => void;
   onEditProposal: (p: ProposalData) => void;
   onApproveProposal: (p: ProposalData) => void;
   onPrintProposal: (p: { proposal: Proposal; client: Client | null }) => void;
+  onGenerateContract: (p: { proposal: Proposal; client: Client | null }) => void;
 }) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -1329,6 +1489,9 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
                     )}
                     <button onClick={() => onPrintProposal(p)} className="hover:text-blue-500 transition-colors cursor-pointer" title="Imprimir / Gerar PDF">
                       <Printer size={16} />
+                    </button>
+                    <button onClick={() => onGenerateContract(p)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Gerar Contrato">
+                      <FileSignature size={16} />
                     </button>
                     <button onClick={() => onEditProposal(p)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                       <Edit2 size={16} />
@@ -3375,6 +3538,705 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
           </div>
 
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
+            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+              {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// CONTRACTS — shared helpers
+// -------------------------------------------------------------
+const contractBrandLabel = (brand: string) =>
+  brand === 'vinicius' ? 'Vinicius Kolling.' : brand === 'procurada' ? 'agência PROCURADA.' : 'agência OCTO.';
+
+const publicSignUrl = (token: string) => `${window.location.origin}/assinar/${token}`;
+
+const fmtContractDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+// -------------------------------------------------------------
+// CONTRACT PRINT DOCUMENT (PDF) — includes signature, date/time and IP
+// -------------------------------------------------------------
+function ContractPrintDocument({ contract }: { contract: Contract }) {
+  const vars: Record<string, string> = { ...(contract.merge_vars as Record<string, string> || {}), ...(contract.signer_values as Record<string, string> || {}) };
+  const body = contract.signed_body || resolveVars(contract.body || '', vars);
+  const propId = contract.id.replace(/-/g, '').substring(0, 6).toUpperCase();
+
+  return (
+    <div className="hidden print:block w-full bg-white text-black font-sans leading-relaxed">
+      <style media="print">
+        {`@page { size: A4 portrait; margin: 2cm; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }`}
+      </style>
+
+      <div className="flex items-center gap-4 border-b-2 border-[#C13584]/30 pb-6 mb-8 mt-4">
+        <h1 className="text-3xl font-black text-[#C13584] leading-none tracking-tighter" style={{ fontFamily: 'Inter, sans-serif' }}>
+          {contractBrandLabel(contract.brand)}
+        </h1>
+        <div className="h-12 w-px bg-gray-300 mx-2"></div>
+        <div>
+          <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Contrato</p>
+          <p className="text-lg font-black tracking-tight text-[#C13584] mt-1">{contract.title}</p>
+        </div>
+        <div className="ml-auto text-right text-xs text-gray-400">
+          <p>Emissão: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</p>
+          <p className="font-mono font-bold text-gray-600 mt-1">#{propId}</p>
+        </div>
+      </div>
+
+      <div className="text-sm text-gray-800 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: body }} />
+
+      {/* Signature block */}
+      <div className="mt-12 pt-6 border-t border-gray-200">
+        {contract.status === 'signed' ? (
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Assinatura do Contratante</p>
+            {contract.signature_data && (
+              <img src={contract.signature_data} alt="Assinatura" style={{ maxHeight: '120px' }} />
+            )}
+            <p className="mt-1 font-semibold text-gray-800">{contract.signer_name || ''}</p>
+            <div className="mt-4 text-xs text-gray-500 leading-relaxed">
+              <p>Assinado eletronicamente em <strong>{contract.signed_at ? fmtContractDateTime(contract.signed_at) : ''}</strong></p>
+              <p>Endereço IP: <strong>{contract.signer_ip || '—'}</strong></p>
+              <p>Identificador do documento: <strong className="font-mono">#{propId}</strong></p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400 italic">Contrato ainda não assinado.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// CONTRACTS VIEW (listing)
+// -------------------------------------------------------------
+function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
+  contracts: Contract[];
+  proposals: { proposal: Proposal; client: Client | null }[];
+  refetch: () => void;
+  onDownloadPdf: (c: Contract) => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'signed'>('all');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const contractNumber = (id: string) => id.replace(/-/g, '').substring(0, 6).toUpperCase();
+
+  const copyLink = (token: string, id: string) => {
+    navigator.clipboard.writeText(publicSignUrl(token));
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja apagar este contrato? Esta ação não pode ser desfeita.')) {
+      setIsDeleting(id);
+      await supabase.from('contracts').delete().eq('id', id);
+      refetch();
+      setIsDeleting(null);
+    }
+  };
+
+  const filtered = contracts.filter(c => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+    const q = search.toLowerCase();
+    return (
+      contractNumber(c.id).toLowerCase().includes(q) ||
+      (c.signer_name || '').toLowerCase().includes(q) ||
+      (c.title || '').toLowerCase().includes(q)
+    );
+  });
+
+  const statusBadge = (c: Contract) => {
+    const expired = c.status === 'pending' && c.valid_until && new Date(c.valid_until + 'T23:59:59Z') < new Date();
+    if (c.status === 'signed') return <span className="px-2.5 py-1 bg-green-100/80 text-green-700 rounded-lg text-xs font-semibold whitespace-nowrap">Assinado</span>;
+    if (c.status === 'cancelled') return <span className="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-lg text-xs font-semibold whitespace-nowrap">Cancelado</span>;
+    if (expired) return <span className="px-2.5 py-1 bg-red-100/80 text-red-700 rounded-lg text-xs font-semibold whitespace-nowrap">Link expirado</span>;
+    return <span className="px-2.5 py-1 bg-amber-100/80 text-amber-700 rounded-lg text-xs font-semibold whitespace-nowrap">Aguardando assinatura</span>;
+  };
+
+  const proposalNumberFor = (c: Contract) => {
+    if (!c.proposal_id) return null;
+    const found = proposals.find(p => p.proposal.id === c.proposal_id);
+    return found ? found.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase() : null;
+  };
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="p-5 border-b border-white/40 flex flex-wrap justify-between items-center gap-3 bg-white/20 backdrop-blur-md">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por número, cliente ou título..."
+          className="pl-4 pr-4 py-2 border border-white/60 bg-white/40 backdrop-blur-sm rounded-xl text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#C13584] focus:bg-white/80 transition-all shadow-inner"
+        />
+        <div className="flex gap-1 bg-white/40 p-1 rounded-xl border border-white/60">
+          {(['all', 'pending', 'signed'] as const).map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${statusFilter === s ? 'bg-[#C13584] text-white' : 'text-gray-600 hover:bg-white/60'}`}>
+              {s === 'all' ? 'Todos' : s === 'pending' ? 'Aguardando' : 'Assinados'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+            <th className="p-4 pl-6 font-medium w-24">Nº</th>
+            <th className="p-4 font-medium">Cliente / Contrato</th>
+            <th className="p-4 font-medium">Status</th>
+            <th className="p-4 font-medium">Assinatura</th>
+            <th className="p-4 pr-6 font-medium text-right">Ação</th>
+          </tr>
+        </thead>
+        <tbody className="text-sm">
+          {filtered.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="p-8 text-center text-gray-500">
+                {search || statusFilter !== 'all' ? 'Nenhum contrato encontrado.' : 'Nenhum contrato gerado ainda. Gere um a partir de uma proposta.'}
+              </td>
+            </tr>
+          ) : (
+            filtered.map(c => {
+              const propNum = proposalNumberFor(c);
+              return (
+                <tr key={c.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+                  <td className="p-4 pl-6">
+                    <span className="inline-block font-mono font-bold text-xs text-[#C13584] bg-pink-50 border border-pink-100 px-2 py-1 rounded-lg tracking-widest">
+                      #{contractNumber(c.id)}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-gray-900">{c.signer_name || '—'}</div>
+                    <div className="text-sm text-gray-500 font-normal mt-0.5">{c.title}</div>
+                    <div className="text-xs text-gray-400 font-normal mt-0.5">
+                      {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                      {propNum && <> · Proposta #{propNum}</>}
+                    </div>
+                  </td>
+                  <td className="p-4">{statusBadge(c)}</td>
+                  <td className="p-4 text-gray-600">
+                    {c.status === 'signed' && c.signed_at ? (
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-700">{fmtContractDateTime(c.signed_at)}</div>
+                        <div className="text-gray-400">IP: {c.signer_ip || '—'}</div>
+                      </div>
+                    ) : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="p-4 pr-6 text-right">
+                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                      {c.status !== 'signed' && (
+                        <>
+                          <button onClick={() => copyLink(c.public_token, c.id)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Copiar link público">
+                            {copiedId === c.id ? <span className="text-xs text-green-600 font-semibold">Copiado!</span> : <Copy size={16} />}
+                          </button>
+                          <a href={publicSignUrl(c.public_token)} target="_blank" rel="noreferrer" className="hover:text-blue-500 transition-colors cursor-pointer" title="Abrir página de assinatura">
+                            <ExternalLink size={16} />
+                          </a>
+                        </>
+                      )}
+                      <button onClick={() => onDownloadPdf(c)} className="hover:text-blue-500 transition-colors cursor-pointer" title="Baixar PDF">
+                        <Download size={16} />
+                      </button>
+                      <button disabled={isDeleting === c.id} onClick={() => handleDelete(c.id)} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
+                        {isDeleting === c.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// CONTRACT FORM VIEW (generate a contract from a proposal)
+// -------------------------------------------------------------
+function ContractFormView({ proposalData, proposals, contractTemplates, agencySettings, onSave, onCancel }: {
+  proposalData: { proposal: Proposal; client: Client | null } | null;
+  proposals: { proposal: Proposal; client: Client | null }[];
+  contractTemplates: ContractTemplate[];
+  agencySettings: AgencySettings | null;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const [picked, setPicked] = useState<{ proposal: Proposal; client: Client | null } | null>(proposalData);
+  const [templateId, setTemplateId] = useState<string>('');
+  const [brand, setBrand] = useState<string>(((picked?.proposal.content_json as Record<string, unknown>)?.brand as string) || 'octo');
+  const [signerName, setSignerName] = useState(picked?.client?.name || '');
+  const [signerEmail, setSignerEmail] = useState(picked?.client?.email || '');
+  const defaultValid = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
+  const [validUntil, setValidUntil] = useState(defaultValid);
+  // Default payment method inferred from the proposal's installment count.
+  const initialMethod: 'avista' | 'parcelado' =
+    (((proposalData?.proposal.content_json as Record<string, unknown>)?.numInstallments as number) || 1) > 1 ? 'parcelado' : 'avista';
+  const [paymentMethod, setPaymentMethod] = useState<'avista' | 'parcelado'>(initialMethod);
+  const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState<{ token: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const template = contractTemplates.find(t => t.id === templateId) || null;
+
+  const baseVars = picked
+    ? { ...buildProposalVarMap(picked.proposal, picked.client), ...buildAgencyVarMap(agencySettings) }
+    : buildAgencyVarMap(agencySettings);
+  // Payment condition clause derived from the selected method.
+  const condicaoPagamento = !picked ? '' : paymentMethod === 'avista'
+    ? `O valor total de ${baseVars.VALOR_LIQUIDO} deverá ser pago à vista, no prazo de até 7 (sete) dias a contar da assinatura deste contrato.`
+    : `O valor total de ${baseVars.VALOR_BRUTO} será pago em ${baseVars.NUM_PARCELAS} parcela(s), conforme as condições da proposta comercial aprovada.`;
+  const mergeVars = {
+    ...baseVars,
+    CONDICAO_PAGAMENTO: condicaoPagamento,
+    FORMA_PAGAMENTO: paymentMethod === 'avista' ? 'à vista' : 'parcelado',
+  };
+  const previewBody = template ? resolveVars(template.body || '', mergeVars) : '';
+  const signerFields = (template?.signer_fields as SignerField[]) || [];
+
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!picked) { alert('Selecione uma proposta.'); return; }
+    if (!template) { alert('Selecione um modelo de contrato.'); return; }
+    setLoading(true);
+    try {
+      const token = (crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, '');
+      const { error } = await supabase.from('contracts').insert({
+        proposal_id: picked.proposal.id,
+        template_id: template.id,
+        public_token: token,
+        status: 'pending',
+        title: template.title,
+        body: template.body,
+        merge_vars: mergeVars,
+        signer_fields: template.signer_fields || [],
+        brand,
+        signer_name: signerName || null,
+        signer_email: signerEmail || null,
+        valid_until: validUntil || null,
+      });
+      if (error) throw error;
+      setCreated({ token });
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao gerar contrato: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fieldClass = 'w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner';
+
+  // Success state — show the public link
+  if (created) {
+    const link = publicSignUrl(created.token);
+    return (
+      <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-2xl mx-auto">
+        <div className="p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle size={28} />
+          </div>
+          <h3 className="font-semibold text-xl text-gray-800">Contrato gerado!</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-6">Envie o link abaixo para o cliente preencher os dados e assinar.</p>
+          <div className="flex items-center gap-2 bg-white/70 border border-white/60 rounded-xl p-2 pl-4">
+            <span className="flex-1 text-sm text-gray-700 truncate text-left">{link}</span>
+            <button onClick={() => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
+              className="px-4 py-2 bg-[#C13584] text-white rounded-lg text-sm font-medium hover:bg-[#A42D70] cursor-pointer flex items-center gap-2 whitespace-nowrap">
+              <Copy size={16} /> {copied ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+          <div className="mt-6 flex justify-center gap-3">
+            <a href={link} target="_blank" rel="noreferrer" className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 cursor-pointer flex items-center gap-2">
+              <ExternalLink size={16} /> Abrir página
+            </a>
+            <button onClick={onSave} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 cursor-pointer">
+              Ir para Contratos
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-3xl mx-auto">
+      <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
+        <h3 className="font-semibold text-xl text-gray-800">Gerar Contrato</h3>
+        <p className="text-sm text-gray-600 mt-1">Crie um contrato a partir de uma proposta e gere o link público de assinatura.</p>
+      </div>
+
+      <div className="p-8">
+        <form onSubmit={handleGenerate} className="flex flex-col gap-6">
+          {/* Proposal selector (when not pre-selected) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Proposta de origem</label>
+            {proposalData ? (
+              <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-gray-800">
+                <span className="font-semibold">{picked?.client?.name || 'Cliente'}</span> — {picked?.proposal.service_type} (#{picked?.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase()})
+              </div>
+            ) : (
+              <select required value={picked?.proposal.id || ''} onChange={e => {
+                const f = proposals.find(p => p.proposal.id === e.target.value) || null;
+                setPicked(f);
+                setSignerName(f?.client?.name || '');
+                setSignerEmail(f?.client?.email || '');
+                setBrand(((f?.proposal.content_json as Record<string, unknown>)?.brand as string) || 'octo');
+              }} className={fieldClass}>
+                <option value="">Selecione uma proposta...</option>
+                {proposals.map(p => (
+                  <option key={p.proposal.id} value={p.proposal.id}>
+                    {p.client?.name || 'Cliente'} — {p.proposal.service_type} (#{p.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Modelo de Contrato</label>
+            {contractTemplates.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">Nenhum modelo de contrato cadastrado. Crie um em "Modelos de Contrato" primeiro.</p>
+            ) : (
+              <select required value={templateId} onChange={e => setTemplateId(e.target.value)} className={fieldClass}>
+                <option value="">Selecione um modelo...</option>
+                {contractTemplates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+              </select>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Contratante</label>
+              <input type="text" value={signerName} onChange={e => setSignerName(e.target.value)} className={fieldClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+              <input type="email" value={signerEmail} onChange={e => setSignerEmail(e.target.value)} className={fieldClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Link válido até</label>
+              <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className={fieldClass} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cabeçalho</label>
+              <select value={brand} onChange={e => setBrand(e.target.value)} className={fieldClass}>
+                <option value="octo">agência OCTO.</option>
+                <option value="vinicius">Vinicius Kolling</option>
+                <option value="procurada">agência PROCURADA.</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'avista' | 'parcelado')} className={fieldClass}>
+                <option value="avista">À vista (valor líquido, prazo 7 dias)</option>
+                <option value="parcelado">Parcelado (valor bruto + nº de parcelas)</option>
+              </select>
+            </div>
+          </div>
+
+          {picked && (
+            <div className="p-3 rounded-xl bg-white/30 border border-white/50 text-sm text-gray-600">
+              <span className="font-medium text-gray-700">Condição que entrará no contrato: </span>
+              {condicaoPagamento}
+            </div>
+          )}
+
+          {signerFields.length > 0 && (
+            <div className="p-4 rounded-xl bg-white/30 border border-white/50">
+              <p className="text-sm font-medium text-gray-700 mb-2">O cliente preencherá:</p>
+              <div className="flex flex-wrap gap-2">
+                {signerFields.map(f => (
+                  <span key={f.key} className="px-2.5 py-1 text-xs rounded-lg bg-[#C13584]/10 text-[#C13584] border border-[#C13584]/20">
+                    {f.label}{f.required ? ' *' : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {template && (template.body || '').includes('{{AGENCIA_') && !agencySettings?.razao_social && (
+            <div className="flex items-center gap-2 p-4 rounded-xl text-sm bg-amber-50 text-amber-700 border border-amber-200">
+              <AlertCircle size={18} className="flex-shrink-0" />
+              <p>Este modelo usa dados da agência, mas eles ainda não foram preenchidos em <strong>Configurações → Dados da Agência</strong>. As variáveis ficarão em branco no contrato.</p>
+            </div>
+          )}
+
+          {template && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Prévia do contrato</p>
+              <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 max-h-72 overflow-y-auto text-sm text-gray-700 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: previewBody }} />
+              <p className="text-xs text-gray-400 mt-2">Os campos do cliente (ex.: CPF) aparecerão preenchidos após a assinatura.</p>
+            </div>
+          )}
+
+          <div className="mt-2 flex justify-end gap-3 pt-6 border-t border-white/40">
+            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+              {loading && <Loader2 size={16} className="animate-spin" />} Gerar Contrato e Link
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// CONTRACT TEMPLATES VIEW
+// -------------------------------------------------------------
+function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewModal, onEditTemplate, onBack }: {
+  contractTemplates: ContractTemplate[];
+  contracts: Contract[];
+  refetch: () => void;
+  openNewModal: () => void;
+  onEditTemplate: (t: ContractTemplate) => void;
+  onBack: () => void;
+}) {
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
+
+  const usageCount = (id: string) => contracts.filter(c => c.template_id === id).length;
+
+  const handleDelete = async (id: string, title: string) => {
+    if (confirm(`Apagar o modelo de contrato "${title}"? Contratos já gerados não são afetados.`)) {
+      setIsDeleting(id);
+      await supabase.from('contract_templates').delete().eq('id', id);
+      refetch();
+      setIsDeleting(null);
+    }
+  };
+
+  const handleDuplicate = async (t: ContractTemplate) => {
+    setIsDuplicating(t.id);
+    try {
+      const { error } = await supabase.from('contract_templates').insert({
+        title: `${t.title} (cópia)`, body: t.body, signer_fields: t.signer_fields || [],
+      });
+      if (error) throw error;
+      refetch();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao duplicar: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-sm text-gray-500 hover:text-[#C13584] cursor-pointer flex items-center gap-1">
+            <ChevronLeft size={16} /> Contratos
+          </button>
+          <h3 className="font-semibold text-lg text-gray-800">Modelos de Contrato</h3>
+        </div>
+      </div>
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+            <th className="p-4 pl-6 font-medium">Título</th>
+            <th className="p-4 font-medium">Campos do cliente</th>
+            <th className="p-4 font-medium">Em uso</th>
+            <th className="p-4 pr-6 font-medium text-right">Ação</th>
+          </tr>
+        </thead>
+        <tbody className="text-sm">
+          {contractTemplates.length === 0 ? (
+            <tr>
+              <td colSpan={4} className="p-8 text-center text-gray-500">
+                Nenhum modelo de contrato ainda.
+                <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro modelo.</button>
+              </td>
+            </tr>
+          ) : (
+            contractTemplates.map(t => {
+              const fields = (t.signer_fields as SignerField[]) || [];
+              const uses = usageCount(t.id);
+              return (
+                <tr key={t.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+                  <td className="p-4 pl-6 text-gray-800 font-medium align-top">{t.title}</td>
+                  <td className="p-4 align-top text-gray-500">
+                    {fields.length === 0 ? <span className="text-gray-300">—</span> : (
+                      <div className="flex flex-wrap gap-1 max-w-md">
+                        {fields.map(f => <span key={f.key} className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-gray-600">{f.label}</span>)}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-4 align-top">
+                    {uses > 0 ? <span className="px-2.5 py-1 bg-pink-100/80 text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">{uses} contrato(s)</span> : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="p-4 pr-6 text-right align-top">
+                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                      <button onClick={() => onEditTemplate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar"><Edit2 size={16} /></button>
+                      <button disabled={isDuplicating === t.id} onClick={() => handleDuplicate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Duplicar">
+                        {isDuplicating === t.id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+                      </button>
+                      <button disabled={isDeleting === t.id} onClick={() => handleDelete(t.id, t.title)} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
+                        {isDeleting === t.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// CONTRACT TEMPLATE FORM VIEW
+// -------------------------------------------------------------
+const SIGNER_FIELD_TYPES: { value: SignerField['type']; label: string }[] = [
+  { value: 'text', label: 'Texto' },
+  { value: 'cpf', label: 'CPF' },
+  { value: 'email', label: 'E-mail' },
+  { value: 'date', label: 'Data' },
+  { value: 'textarea', label: 'Texto longo' },
+];
+
+function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }: {
+  templateData: ContractTemplate | null;
+  contracts: Contract[];
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const isEditing = !!templateData;
+  const [title, setTitle] = useState(templateData?.title || '');
+  const [body, setBody] = useState(templateData?.body || '');
+  const [fields, setFields] = useState<SignerField[]>((templateData?.signer_fields as SignerField[]) || [{ key: 'CPF', label: 'CPF', type: 'cpf', required: true }]);
+
+  const usageCount = isEditing ? contracts.filter(c => c.template_id === templateData!.id).length : 0;
+
+  // Normalize a label into an uppercase variable key (no spaces/accents)
+  const toKey = (s: string) => s.normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+  const addField = () => setFields([...fields, { key: '', label: '', type: 'text', required: false }]);
+  const updateField = (i: number, patch: Partial<SignerField>) => setFields(fields.map((f, idx) => idx === i ? { ...f, ...patch } : f));
+  const removeField = (i: number) => setFields(fields.filter((_, idx) => idx !== i));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // Auto-fill keys from labels where empty, and validate uniqueness
+    const cleaned = fields
+      .map(f => ({ ...f, key: (f.key || toKey(f.label)).trim(), label: f.label.trim() }))
+      .filter(f => f.key && f.label);
+    const keys = cleaned.map(f => f.key);
+    if (new Set(keys).size !== keys.length) {
+      alert('Há variáveis (chaves) de campo duplicadas. Cada campo precisa de uma chave única.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = { title, body, signer_fields: cleaned };
+      if (isEditing && templateData) {
+        const { error } = await supabase.from('contract_templates').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', templateData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('contract_templates').insert(payload);
+        if (error) throw error;
+      }
+      onSave();
+    } catch (err) {
+      console.error(err);
+      alert(`Erro ao salvar modelo de contrato: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fieldClass = 'w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner';
+
+  // Available variables = proposal vars + agency vars + signer field keys
+  const allVars = [
+    ...CONTRACT_TEMPLATE_VARS.map(v => v.key),
+    ...AGENCY_TEMPLATE_VARS.map(v => v.key),
+    ...fields.map(f => f.key || toKey(f.label)).filter(Boolean),
+  ];
+
+  return (
+    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+      <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
+        <h3 className="font-semibold text-xl text-gray-800">{isEditing ? 'Editar Modelo de Contrato' : 'Novo Modelo de Contrato'}</h3>
+        <p className="text-sm text-gray-600 mt-1">Use variáveis no texto; os campos do cliente são preenchidos na assinatura. Contratos já gerados guardam o texto da época.</p>
+      </div>
+
+      <div className="p-8">
+        {isEditing && usageCount > 0 && (
+          <div className="mb-6 flex items-center gap-2 p-4 rounded-xl text-sm bg-pink-50 text-[#C13584] border border-pink-200">
+            <AlertCircle size={18} />
+            <p>Este modelo já gerou <strong>{usageCount} contrato(s)</strong>. Alterações aqui valem apenas para novos contratos.</p>
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Título do Contrato</label>
+            <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className={fieldClass} placeholder="Ex: Contrato de Prestação de Serviços" />
+          </div>
+
+          {/* Signer fields editor */}
+          <div className="p-4 rounded-2xl bg-white/30 border border-white/50">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <h4 className="font-semibold text-gray-800">Campos preenchidos pelo cliente</h4>
+                <p className="text-xs text-gray-500">Cada campo vira uma variável (a "chave") que você pode usar no texto, ex.: <span className="font-mono">{'{{CPF}}'}</span></p>
+              </div>
+              <button type="button" onClick={addField} className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer whitespace-nowrap">+ Campo</button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {fields.length === 0 && <p className="text-sm text-gray-500 italic">Nenhum campo. O cliente apenas assinará.</p>}
+              {fields.map((f, i) => (
+                <div key={i} className="flex flex-wrap gap-2 items-center bg-white/40 p-2 rounded-xl border border-white/50">
+                  <input type="text" placeholder="Rótulo (ex: CPF)" value={f.label}
+                    onChange={e => updateField(i, { label: e.target.value, key: f.key || toKey(e.target.value) })}
+                    className="flex-1 min-w-[140px] border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
+                  <input type="text" placeholder="Chave (variável)" value={f.key}
+                    onChange={e => updateField(i, { key: toKey(e.target.value) })}
+                    className="w-36 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60 font-mono" />
+                  <select value={f.type} onChange={e => updateField(i, { type: e.target.value as SignerField['type'] })}
+                    className="border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60">
+                    {SIGNER_FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <label className="flex items-center gap-1.5 text-sm text-gray-600 px-2 cursor-pointer">
+                    <input type="checkbox" checked={f.required} onChange={e => updateField(i, { required: e.target.checked })} className="accent-[#C13584]" />
+                    Obrigatório
+                  </label>
+                  <button type="button" onClick={() => removeField(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 size={16} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative z-0">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Texto do Contrato</label>
+            <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+              <Editor value={body} onChange={(e) => setBody(e.target.value)} containerProps={{ style: { minHeight: '24rem', resize: 'vertical' } }} />
+            </div>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className="text-xs text-gray-400 self-center mr-1">Variáveis disponíveis:</span>
+              {allVars.map(k => <span key={k} className="px-2 py-0.5 text-xs rounded-md bg-[#C13584]/10 text-[#C13584] border border-[#C13584]/20 font-mono">{`{{${k}}}`}</span>)}
+            </div>
+          </div>
+
+          <div className="mt-2 flex justify-end gap-3 pt-6 border-t border-white/40">
             <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
             <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}

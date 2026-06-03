@@ -73,6 +73,65 @@ export type Proposal = {
   created_at: string;
 };
 
+// --- Contracts (online signing) ---
+
+export type SignerFieldType = 'text' | 'cpf' | 'email' | 'date' | 'textarea';
+
+// A field the client must fill on the public signing page.
+// `key` doubles as the template variable name, e.g. key "CPF" -> {{CPF}}.
+export type SignerField = {
+  key: string;
+  label: string;
+  type: SignerFieldType;
+  required: boolean;
+};
+
+export type ContractTemplate = {
+  id: string;
+  title: string;
+  body: string | null;
+  signer_fields: SignerField[] | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ContractStatus = 'pending' | 'signed' | 'cancelled';
+
+export type Contract = {
+  id: string;
+  proposal_id: string | null;
+  template_id: string | null;
+  public_token: string;
+  status: ContractStatus;
+  title: string;
+  body: string | null;
+  merge_vars: Record<string, string> | null;
+  signer_fields: SignerField[] | null;
+  brand: string;
+  signer_name: string | null;
+  signer_email: string | null;
+  signer_values: Record<string, string> | null;
+  signature_data: string | null;
+  signed_body: string | null;
+  signed_at: string | null;
+  signer_ip: string | null;
+  signer_user_agent: string | null;
+  valid_until: string | null;
+  created_at: string;
+};
+
+export type AgencySettings = {
+  id: string;
+  razao_social: string | null;
+  cnpj: string | null;
+  endereco: string | null;
+  cidade: string | null;
+  uf: string | null;
+  email: string | null;
+  telefone: string | null;
+  updated_at: string;
+};
+
 export type CashFlowType = 'Income' | 'Expense';
 export type CashFlowCategory = string; // Dynamic, from cash_flow_categories table
 export type CashFlowStatus = 'Paid' | 'Pending';
@@ -129,6 +188,21 @@ export interface Database {
         Row: SectionTemplate;
         Insert: { id?: string; title: string; content?: string | null; created_at?: string; updated_at?: string; };
         Update: { id?: string; title?: string; content?: string | null; created_at?: string; updated_at?: string; };
+      };
+      contract_templates: {
+        Row: ContractTemplate;
+        Insert: { id?: string; title: string; body?: string | null; signer_fields?: any | null; created_at?: string; updated_at?: string; };
+        Update: { id?: string; title?: string; body?: string | null; signer_fields?: any | null; created_at?: string; updated_at?: string; };
+      };
+      agency_settings: {
+        Row: AgencySettings;
+        Insert: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; updated_at?: string; };
+        Update: { id?: string; razao_social?: string | null; cnpj?: string | null; endereco?: string | null; cidade?: string | null; uf?: string | null; email?: string | null; telefone?: string | null; updated_at?: string; };
+      };
+      contracts: {
+        Row: Contract;
+        Insert: { id?: string; proposal_id?: string | null; template_id?: string | null; public_token: string; status?: ContractStatus; title: string; body?: string | null; merge_vars?: any | null; signer_fields?: any | null; brand?: string; signer_name?: string | null; signer_email?: string | null; signer_values?: any | null; signature_data?: string | null; signed_body?: string | null; signed_at?: string | null; signer_ip?: string | null; signer_user_agent?: string | null; valid_until?: string | null; created_at?: string; };
+        Update: { id?: string; proposal_id?: string | null; template_id?: string | null; public_token?: string; status?: ContractStatus; title?: string; body?: string | null; merge_vars?: any | null; signer_fields?: any | null; brand?: string; signer_name?: string | null; signer_email?: string | null; signer_values?: any | null; signature_data?: string | null; signed_body?: string | null; signed_at?: string | null; signer_ip?: string | null; signer_user_agent?: string | null; valid_until?: string | null; created_at?: string; };
       };
       cash_flow: {
         Row: CashFlow;

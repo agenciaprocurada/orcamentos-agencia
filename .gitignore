@@ -30,3 +30,6 @@ dist-ssr
 # AI Assistant folders
 .claude
 .gemini
+
+# Supabase CLI local temp
+supabase/.temp/

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate } from '../types/database';
+import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate, Contract, ContractTemplate, AgencySettings } from '../types/database';
 
 export function useSupabase() {
     const [proposals, setProposals] = useState<{ proposal: Proposal; client: Client | null }[]>([]);
@@ -10,6 +10,9 @@ export function useSupabase() {
     const [cashFlowCategories, setCashFlowCategories] = useState<CashFlowCategoryRecord[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [sectionTemplates, setSectionTemplates] = useState<SectionTemplate[]>([]);
+    const [contracts, setContracts] = useState<Contract[]>([]);
+    const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
+    const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(null);
     const [loading, setLoading] = useState(true);
 
     const loadAll = useCallback(async (showLoading: boolean) => {
@@ -51,6 +54,23 @@ export function useSupabase() {
             .select('*')
             .order('title', { ascending: true });
 
+        const { data: contractsData } = await supabase
+            .from('contracts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        const { data: contractTemplatesData } = await supabase
+            .from('contract_templates')
+            .select('*')
+            .order('title', { ascending: true });
+
+        const { data: agencyData } = await supabase
+            .from('agency_settings')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
         if (propData) {
             const mapped = propData.map((p: any) => ({
                 proposal: { ...p, client: undefined },
@@ -64,6 +84,9 @@ export function useSupabase() {
         if (categoriesData) setCashFlowCategories(categoriesData as CashFlowCategoryRecord[]);
         if (tasksData) setTasks(tasksData as Task[]);
         if (sectionTemplatesData) setSectionTemplates(sectionTemplatesData as SectionTemplate[]);
+        if (contractsData) setContracts(contractsData as Contract[]);
+        if (contractTemplatesData) setContractTemplates(contractTemplatesData as ContractTemplate[]);
+        setAgencySettings((agencyData as AgencySettings) || null);
 
         if (showLoading) setLoading(false);
     }, []);
@@ -72,5 +95,5 @@ export function useSupabase() {
     // Silent: refreshes data without triggering the loading spinner (keeps current view mounted)
     const silentRefetch = useCallback(() => loadAll(false), [loadAll]);
 
-    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, loading, refetch: fetchDashboardData, silentRefetch };
+    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch: fetchDashboardData, silentRefetch };
 }
