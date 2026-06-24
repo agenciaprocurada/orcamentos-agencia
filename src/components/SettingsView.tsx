@@ -51,8 +51,8 @@ export function SettingsView() {
                     <Settings size={20} />
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800">Minha Conta</h2>
-                    <p className="text-sm text-gray-500">Altere seu e-mail ou redefina sua senha de acesso</p>
+                    <h2 className="text-xl font-bold text-[var(--color-ink)]">Minha Conta</h2>
+                    <p className="text-sm text-[var(--color-ink-3)]">Altere seu e-mail ou redefina sua senha de acesso</p>
                 </div>
             </div>
 
@@ -65,7 +65,7 @@ export function SettingsView() {
 
             <form onSubmit={handleUpdate} className="flex flex-col gap-6">
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Novo E-mail</label>
+                    <label className="block text-sm font-semibold text-[var(--color-ink-2)] mb-2">Novo E-mail</label>
                     <input
                         type="email"
                         value={email}
@@ -73,11 +73,11 @@ export function SettingsView() {
                         placeholder="Deixe em branco para não alterar"
                         className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner transition-all"
                     />
-                    <p className="text-xs text-gray-400 mt-1">Dependendo das configurações do servidor, a troca pode exigir confirmação via link no e-mail novo.</p>
+                    <p className="text-xs text-[var(--color-ink-3)] mt-1">Dependendo das configurações do servidor, a troca pode exigir confirmação via link no e-mail novo.</p>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Nova Senha</label>
+                    <label className="block text-sm font-semibold text-[var(--color-ink-2)] mb-2">Nova Senha</label>
                     <div className="relative">
                         <input
                             type={showPassword ? 'text' : 'password'}
@@ -89,7 +89,7 @@ export function SettingsView() {
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#C13584] transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)] hover:text-[#C13584] transition-colors"
                         >
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
@@ -98,7 +98,7 @@ export function SettingsView() {
 
                 {password.length > 0 && (
                     <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Confirmar Nova Senha</label>
+                        <label className="block text-sm font-semibold text-[var(--color-ink-2)] mb-2">Confirmar Nova Senha</label>
                         <div className="relative">
                             <input
                                 type={showPassword ? 'text' : 'password'}

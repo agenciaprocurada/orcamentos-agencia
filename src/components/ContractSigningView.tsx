@@ -124,7 +124,7 @@ export function ContractSigningView({ token }: { token: string }) {
 
   const renderField = (f: { key: string; label: string; type: SignerField['type']; required: boolean }) => (
     <div key={f.key}>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      <label className="block text-sm font-medium text-[var(--color-ink-2)] mb-1.5">
         {f.label}{f.required && <span className="text-red-400"> *</span>}
       </label>
       {f.type === 'textarea' ? (
@@ -226,8 +226,8 @@ export function ContractSigningView({ token }: { token: string }) {
           <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={24} />
           </div>
-          <h1 className="text-lg font-bold text-gray-800 mb-1">Contrato indisponível</h1>
-          <p className="text-sm text-gray-500">{loadError}</p>
+          <h1 className="text-lg font-bold text-[var(--color-ink)] mb-1">Contrato indisponível</h1>
+          <p className="text-sm text-[var(--color-ink-3)]">{loadError}</p>
         </div>
       </div>
     );
@@ -249,8 +249,8 @@ export function ContractSigningView({ token }: { token: string }) {
           {(contract.brand || 'o').charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-gray-800 truncate"><BrandTitle brand={contract.brand} /></p>
-          <p className="text-sm text-gray-500 truncate">{contract.title}</p>
+          <p className="font-bold text-[var(--color-ink)] truncate"><BrandTitle brand={contract.brand} /></p>
+          <p className="text-sm text-[var(--color-ink-3)] truncate">{contract.title}</p>
         </div>
       </div>
       {statusBadge}
@@ -264,9 +264,9 @@ export function ContractSigningView({ token }: { token: string }) {
         <div className="max-w-xl mx-auto flex flex-col gap-4">
           {header}
           <div className="bg-white rounded-2xl shadow-sm p-6">
-            <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">Etapa 1 de 2</p>
-            <h2 className="text-lg font-bold text-gray-800">Confirme seus dados</h2>
-            <p className="text-sm text-gray-500 mb-5">Precisamos destas informações para preencher o contrato antes da assinatura.</p>
+            <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase mb-1">Etapa 1 de 2</p>
+            <h2 className="text-lg font-bold text-[var(--color-ink)]">Confirme seus dados</h2>
+            <p className="text-sm text-[var(--color-ink-3)] mb-5">Precisamos destas informações para preencher o contrato antes da assinatura.</p>
 
             <div className="flex flex-col gap-4">
               {formFields.map(renderField)}
@@ -280,13 +280,13 @@ export function ContractSigningView({ token }: { token: string }) {
 
             <div className="mt-6 flex justify-end">
               <button type="button" onClick={handleContinue} disabled={savingProgress}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer shadow-md">
+                className="btn-primary px-6">
                 {savingProgress ? <Loader2 size={16} className="animate-spin" /> : null}
                 Continuar para o contrato {!savingProgress && <ArrowRight size={16} />}
               </button>
             </div>
           </div>
-          <p className="text-center text-xs text-gray-400 pb-4">
+          <p className="text-center text-xs text-[var(--color-ink-3)] pb-4">
             {contract.valid_until ? `Link válido até ${fmtDate(contract.valid_until)}` : ''}
           </p>
         </div>
@@ -303,7 +303,7 @@ export function ContractSigningView({ token }: { token: string }) {
         {/* Contratante */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-xs font-bold tracking-widest text-gray-400 uppercase">Contratante</p>
+            <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase">Contratante</p>
             {!isSigned && !expired && needsForm && (
               <button type="button" onClick={() => setStep('form')} className="text-xs text-[#C13584] hover:underline cursor-pointer flex items-center gap-1">
                 <ArrowLeft size={12} /> Editar dados
@@ -311,25 +311,25 @@ export function ContractSigningView({ token }: { token: string }) {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 flex-shrink-0 text-lg font-semibold">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-[var(--color-ink-3)] flex-shrink-0 text-lg font-semibold">
               {(values['NOME_CLIENTE'] || contract.signer_name || '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-gray-800 truncate">{values['NOME_CLIENTE'] || contract.signer_name || '—'}</p>
-              {(values['EMAIL_CLIENTE'] || contract.signer_email) && <p className="text-sm text-gray-400 truncate">{values['EMAIL_CLIENTE'] || contract.signer_email}</p>}
+              <p className="font-bold text-[var(--color-ink)] truncate">{values['NOME_CLIENTE'] || contract.signer_name || '—'}</p>
+              {(values['EMAIL_CLIENTE'] || contract.signer_email) && <p className="text-sm text-[var(--color-ink-3)] truncate">{values['EMAIL_CLIENTE'] || contract.signer_email}</p>}
             </div>
           </div>
         </div>
 
         {/* Termos */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">Termos do Contrato</p>
-          <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 text-sm text-gray-700 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: resolvedBody }} />
+          <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase mb-3">Termos do Contrato</p>
+          <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 text-sm text-[var(--color-ink-2)] leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: resolvedBody }} />
         </div>
 
         {/* Assinatura */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-1">Assinatura Digital</p>
+          <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase mb-1">Assinatura Digital</p>
 
           {isSigned ? (
             <div className="mt-3">
@@ -337,13 +337,13 @@ export function ContractSigningView({ token }: { token: string }) {
                 <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[8rem]">
                   {contract.signature_data
                     ? <img src={contract.signature_data} alt="Assinatura do contratante" className="max-h-24" />
-                    : <span className="text-gray-400 text-sm">Assinatura registrada</span>}
-                  <span className="mt-2 text-xs text-gray-400 uppercase tracking-wider">Contratante</span>
+                    : <span className="text-[var(--color-ink-3)] text-sm">Assinatura registrada</span>}
+                  <span className="mt-2 text-xs text-[var(--color-ink-3)] uppercase tracking-wider">Contratante</span>
                 </div>
                 {contract.agency_signature && (
                   <div className="border border-gray-200 rounded-xl bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[8rem]">
                     <img src={contract.agency_signature} alt="Assinatura da contratada" className="max-h-24" />
-                    <span className="mt-2 text-xs text-gray-400 uppercase tracking-wider">Contratada</span>
+                    <span className="mt-2 text-xs text-[var(--color-ink-3)] uppercase tracking-wider">Contratada</span>
                   </div>
                 )}
               </div>
@@ -359,10 +359,10 @@ export function ContractSigningView({ token }: { token: string }) {
               </div>
             </div>
           ) : expired ? (
-            <p className="text-sm text-gray-500 mt-2">Este link de assinatura expirou. Solicite um novo link.</p>
+            <p className="text-sm text-[var(--color-ink-3)] mt-2">Este link de assinatura expirou. Solicite um novo link.</p>
           ) : (
             <>
-              <p className="text-sm text-gray-500 mb-3">Ao assinar, você declara que leu e concorda com todos os termos acima.</p>
+              <p className="text-sm text-[var(--color-ink-3)] mb-3">Ao assinar, você declara que leu e concorda com todos os termos acima.</p>
               <div className="relative border-2 border-dashed border-gray-300 rounded-xl h-44 bg-white">
                 <SignaturePad ref={padRef} onChange={setSignEmpty} />
                 {signEmpty && (
@@ -380,11 +380,11 @@ export function ContractSigningView({ token }: { token: string }) {
 
               <div className="mt-4 flex items-center justify-end gap-3">
                 <button type="button" onClick={() => padRef.current?.clear()}
-                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
+                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 text-[var(--color-ink-2)] rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
                   <RefreshCw size={16} /> Limpar
                 </button>
                 <button type="button" onClick={handleSign} disabled={signing}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer shadow-md">
+                  className="btn-primary px-5">
                   {signing ? <Loader2 size={16} className="animate-spin" /> : <PenTool size={16} />}
                   Assinar Contrato
                 </button>
@@ -393,7 +393,7 @@ export function ContractSigningView({ token }: { token: string }) {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 pb-4">
+        <p className="text-center text-xs text-[var(--color-ink-3)] pb-4">
           {contract.valid_until ? `Link válido até ${fmtDate(contract.valid_until)} · ` : ''}GorillaOS
         </p>
       </div>

@@ -1,49 +1,229 @@
 @import "tailwindcss";
 
+/* Inter — product UI workhorse. One family, multiple weights. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @theme {
-  --color-background: #F9F8F6;
-  --color-surface: #FFFFFF;
+  /* Brand — Instagram-magenta, the agency's identity. Kept verbatim. */
   --color-primary: #C13584;
   --color-primary-hover: #A42D70;
-  --color-primary-50: #fff0f7;
+  --color-primary-50: #fdf2f8;
+  --color-primary-100: #fce7f1;
+  --color-primary-200: #f9cfe1;
   --color-primary-500: #C13584;
+  --color-primary-600: #A42D70;
+  --color-primary-700: #842358;
   --color-primary-900: #4a1131;
 
-  --rounded-card: 8px;
-  --rounded-btn: 8px;
+  /* Surfaces & ink. Tuned so translucent glass still clears WCAG. */
+  --color-canvas: #f6f4f8;
+  --color-surface: #ffffff;
+  --color-ink: #1b1420;        /* headings — warm near-black */
+  --color-ink-2: #463d4d;      /* body / secondary — ~7:1 on glass */
+  --color-ink-3: #6a6270;      /* tertiary / meta — large text only */
+
+  --radius-card: 16px;
+  --radius-btn: 10px;
+
+  /* Semantic z-scale — no more arbitrary 999s. */
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-dropdown: 40;
+  --z-backdrop: 50;
+  --z-modal: 60;
+  --z-toast: 70;
 }
 
 @layer base {
   :root {
-    --background: var(--color-background);
-    --foreground: #1c1c1e;
+    --background: var(--color-canvas);
+    --foreground: var(--color-ink);
     --card: var(--color-surface);
-    --card-foreground: #1c1c1e;
+    --card-foreground: var(--color-ink);
     --popover: var(--color-surface);
-    --popover-foreground: #1c1c1e;
+    --popover-foreground: var(--color-ink);
     --primary: var(--color-primary);
     --primary-foreground: #ffffff;
     --secondary: #f4f4f5;
     --secondary-foreground: #18181b;
     --muted: #f4f4f5;
-    --muted-foreground: #71717a;
+    --muted-foreground: var(--color-ink-3);
     --accent: var(--color-primary-50);
     --accent-foreground: var(--color-primary-900);
-    --destructive: #ef4444;
-    --destructive-foreground: #fafafa;
-    --border: #e4e4e7;
-    --input: #e4e4e7;
+    --destructive: #e5484d;
+    --destructive-foreground: #ffffff;
+    --border: #e7e5ea;
+    --input: #e7e5ea;
     --ring: var(--color-primary);
-    --radius: var(--rounded-card);
+    --radius: var(--radius-card);
   }
 
   * {
     border-color: var(--border);
   }
-  
+
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: 'Inter', 'Montserrat', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv05' 1, 'cv08' 1, 'ss01' 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    color: var(--color-ink);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  /* Glass surfaces clip on Firefox without an explicit isolation hint. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass-panel, .glass-card, .glass-raised, .glass-inset {
+      background-color: rgba(255, 255, 255, 0.92);
+    }
+  }
+}
+
+@layer components {
+  /* ---- Glass elevation tiers --------------------------------------
+     One vocabulary, three depths. Opacity rises with elevation so the
+     stack reads as layers and text never washes out. */
+
+  /* Tier 1 — the big container: tables, form panels, dashboard widgets. */
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/80 rounded-[var(--radius-card)]
+           shadow-[0_2px_8px_-2px_rgba(27,20,32,0.06),0_12px_36px_-12px_rgba(27,20,32,0.10)];
+  }
+
+  /* Tier 2 — discrete cards inside the canvas: stat tiles, list cards. */
+  .glass-card {
+    @apply bg-white/65 backdrop-blur-lg border border-white/75 rounded-[var(--radius-card)]
+           shadow-[0_1px_3px_rgba(27,20,32,0.04),0_8px_24px_-12px_rgba(27,20,32,0.10)];
+  }
+
+  /* Interactive lift for clickable cards. */
+  .glass-card-hover {
+    @apply transition-all duration-300 ease-out
+           hover:-translate-y-0.5 hover:bg-white/80
+           hover:shadow-[0_2px_6px_rgba(27,20,32,0.05),0_18px_40px_-16px_rgba(27,20,32,0.18)];
+  }
+
+  /* Tier 3 — sticky chrome: header, toolbars. Higher opacity for legibility while scrolling. */
+  .glass-raised {
+    @apply bg-white/75 backdrop-blur-2xl border-white/60
+           shadow-[0_4px_24px_-12px_rgba(27,20,32,0.12)];
+  }
+
+  /* Recessed wells: inputs, inner panels, empty-state frames. */
+  .glass-inset {
+    @apply bg-white/50 backdrop-blur-sm border border-white/70 rounded-xl;
+  }
+
+  /* ---- Buttons -----------------------------------------------------
+     Single-class usage (btn-primary), so the shared base is inlined. */
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger,
+  .btn-outline-brand {
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-[var(--radius-btn)]
+           text-sm px-4 py-2.5 cursor-pointer transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/50 focus-visible:ring-offset-1
+           disabled:opacity-50 disabled:pointer-events-none select-none;
+  }
+  .btn-primary {
+    @apply bg-[var(--color-primary)] text-white
+           shadow-[0_1px_2px_rgba(27,20,32,0.12),0_6px_16px_-8px_rgba(193,53,132,0.45)]
+           hover:bg-[var(--color-primary-hover)] active:translate-y-px;
+  }
+  .btn-secondary {
+    @apply bg-white/70 backdrop-blur-sm text-[var(--color-ink-2)] border border-white/80
+           shadow-[0_1px_2px_rgba(27,20,32,0.05)] hover:bg-white/90 hover:text-[var(--color-ink)] active:translate-y-px;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-[var(--color-ink-2)] hover:bg-white/60 hover:text-[var(--color-ink)];
+  }
+  .btn-danger {
+    @apply bg-[var(--destructive)] text-white shadow-[0_1px_2px_rgba(27,20,32,0.12)]
+           hover:brightness-95 active:translate-y-px;
+  }
+  .btn-outline-brand {
+    @apply bg-white/70 text-[var(--color-primary)] border border-pink-300
+           hover:bg-[var(--color-primary-50)] hover:border-pink-400;
+  }
+
+  /* Compact icon button for table rows / toolbars. */
+  .icon-action {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--color-ink-3)]
+           transition-colors cursor-pointer hover:bg-white/70
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300/50
+           disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* ---- Badges ------------------------------------------------------ */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+           whitespace-nowrap border;
+  }
+  .badge-neutral { @apply bg-zinc-100 text-zinc-700 border-zinc-200/80; }
+  .badge-brand   { @apply bg-[var(--color-primary-50)] text-[var(--color-primary-700)] border-[var(--color-primary-200)]; }
+  .badge-success { @apply bg-emerald-50 text-emerald-700 border-emerald-200/80; }
+  .badge-warning { @apply bg-amber-50 text-amber-700 border-amber-200/80; }
+  .badge-info    { @apply bg-blue-50 text-blue-700 border-blue-200/80; }
+  .badge-danger  { @apply bg-rose-50 text-rose-700 border-rose-200/80; }
+  .badge-purple  { @apply bg-violet-50 text-violet-700 border-violet-200/80; }
+
+  /* Soft status dot for use inside badges. */
+  .badge-dot { @apply w-1.5 h-1.5 rounded-full opacity-70; background-color: currentColor; }
+
+  /* ---- Form fields ------------------------------------------------- */
+  .field-label {
+    @apply block text-xs font-semibold text-[var(--color-ink-2)] mb-1.5;
+  }
+  .field-input {
+    @apply w-full px-3.5 py-2.5 rounded-[var(--radius-btn)] text-sm text-[var(--color-ink)]
+           bg-white/70 backdrop-blur-sm border border-white/80
+           shadow-[inset_0_1px_2px_rgba(27,20,32,0.03)]
+           placeholder:text-[var(--color-ink-3)]
+           transition-all focus:outline-none focus:bg-white/95
+           focus:border-[var(--color-primary)] focus:ring-2 focus:ring-pink-200;
+  }
+
+  /* ---- Data table -------------------------------------------------- */
+  .data-table { @apply w-full text-left border-collapse; }
+  .data-table thead tr {
+    @apply bg-white/35 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)];
+  }
+  .data-table th { @apply px-4 py-3 font-semibold first:pl-6 last:pr-6; }
+  .data-table tbody tr {
+    @apply border-b border-white/45 transition-colors hover:bg-white/55 last:border-0;
+  }
+  .data-table td { @apply px-4 py-3.5 first:pl-6 last:pr-6 align-middle text-[var(--color-ink-2)]; }
+
+  /* Monospace reference chip (proposal / contract numbers). */
+  .ref-chip {
+    @apply inline-block font-mono font-bold text-[11px] text-[var(--color-primary)]
+           bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]
+           px-2 py-1 rounded-md tracking-widest;
+  }
+
+  /* Section heading inside panels. */
+  .panel-title { @apply text-base font-semibold text-[var(--color-ink)]; }
+}
+
+/* Prose inside WYSIWYG / contract bodies. */
+.leading-relaxed ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+.leading-relaxed ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+.leading-relaxed p { margin-bottom: 0.75rem; }
+
+/* Honour reduced-motion globally. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

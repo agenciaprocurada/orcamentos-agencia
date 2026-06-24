@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   BarChart3,
   FileText,
@@ -102,138 +102,67 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full text-gray-800 font-sans relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-pink-50 print:h-auto print:overflow-visible print:bg-white print:bg-none">
-      {/* Decorative Background Blobs for Glassmorphism */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-gradient-to-br from-pink-400/20 to-purple-400/20 blur-[100px] pointer-events-none print:hidden" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-blue-300/20 to-pink-300/20 blur-[120px] pointer-events-none print:hidden" />
+    <div className="flex h-screen w-full text-[var(--color-ink-2)] font-sans relative overflow-hidden bg-[#f6f4f8] print:h-auto print:overflow-visible print:bg-white print:bg-none">
+      {/* Ambient brand field — calmer chroma so glass surfaces keep contrast. */}
+      <div className="absolute top-[-15%] left-[-8%] w-[42%] h-[55%] rounded-full bg-gradient-to-br from-[#C13584]/12 to-violet-400/10 blur-[130px] pointer-events-none print:hidden" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[48%] h-[60%] rounded-full bg-gradient-to-tr from-indigo-300/10 to-[#C13584]/8 blur-[150px] pointer-events-none print:hidden" />
 
       {/* Content wrapper */}
       <div className="flex w-full h-full relative z-10 print:hidden">
-        {/* Sidebar - Glassmorphism style */}
-        <aside className="w-64 bg-white/40 backdrop-blur-xl border-r border-white/60 p-6 flex flex-col gap-8 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#C13584] to-purple-600 shadow-md flex items-center justify-center">
-              <span className="text-white font-bold text-lg">O</span>
+        {/* Sidebar — refined glass, grouped navigation */}
+        <aside className="w-64 bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 py-6 flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C13584] to-violet-600 shadow-[0_4px_12px_-2px_rgba(193,53,132,0.5)] flex items-center justify-center">
+              <span className="text-white font-bold text-lg leading-none">O</span>
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-[#4a1131]">OctaOS <span className="font-light">CRM</span></h1>
+            <h1 className="text-lg font-bold tracking-tight text-[var(--color-ink)]">OctaOS <span className="font-normal text-[var(--color-ink-3)]">CRM</span></h1>
           </div>
 
-          <nav className="flex flex-col gap-2">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer ${activeTab === 'dashboard' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <LayoutDashboard size={20} />
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('proposals')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer ${activeTab === 'proposals' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <FileText size={20} />
-              Propostas
-            </button>
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer ${activeTab === 'tasks' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <ListTodo size={20} />
-              Tarefas
-            </button>
-            <button
-              onClick={() => setActiveTab('cashflow')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer ${activeTab === 'cashflow' || activeTab === 'cashflow-categories' || activeTab === 'cashflow-all'
-                ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md'
-                : 'text-gray-600 hover:bg-white/40'
-                }`}
-            >
-              <DollarSign size={20} />
-              Fluxo de Caixa
-            </button>
-            {/* Cashflow submenu */}
-            {(activeTab === 'cashflow' || activeTab === 'cashflow-categories' || activeTab === 'cashflow-all' || activeTab === 'cashflow-form') && (
-              <div className="ml-4 flex flex-col gap-1 border-l-2 border-[#C13584]/20 pl-3">
-                <button
-                  onClick={() => setActiveTab('cashflow')}
-                  className={`text-sm px-3 py-2 rounded-lg font-medium transition-all cursor-pointer ${activeTab === 'cashflow' || activeTab === 'cashflow-form'
-                    ? 'text-[#C13584] bg-pink-50/60'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
-                    }`}
-                >
-                  Por Mês
-                </button>
-                <button
-                  onClick={() => setActiveTab('cashflow-all')}
-                  className={`text-sm px-3 py-2 rounded-lg font-medium transition-all cursor-pointer ${activeTab === 'cashflow-all'
-                    ? 'text-[#C13584] bg-pink-50/60'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
-                    }`}
-                >
-                  Todos os Lançamentos
-                </button>
-                <button
-                  onClick={() => setActiveTab('cashflow-categories')}
-                  className={`text-sm px-3 py-2 rounded-lg font-medium transition-all cursor-pointer ${activeTab === 'cashflow-categories'
-                    ? 'text-[#C13584] bg-pink-50/60'
-                    : 'text-gray-500 hover:text-gray-800 hover:bg-white/40'
-                    }`}
-                >
-                  Categorias
-                </button>
-              </div>
-            )}
-            <button
-              onClick={() => setActiveTab('services')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'services' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <Briefcase size={20} />
-              Serviços Base
-            </button>
-            <button
-              onClick={() => setActiveTab('section-templates')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'section-templates' || activeTab === 'section-template-form' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <Layers size={20} />
-              Modelos de Seção
-            </button>
-            <button
-              onClick={() => setActiveTab('contracts')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab) ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <FileSignature size={20} />
-              Contratos
-            </button>
-            <button
-              onClick={() => setActiveTab('clients')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 cursor-pointer border border-transparent ${activeTab === 'clients' || activeTab === 'client-form' ? 'bg-white/60 shadow-sm border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <Users size={20} />
-              Clientes
-            </button>
+          <nav className="flex flex-col gap-5 flex-1 overflow-y-auto -mr-2 pr-2">
+            <div className="flex flex-col gap-1">
+              <NavButton icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+              <NavButton icon={<FileText size={18} />} label="Propostas" active={activeTab === 'proposals'} onClick={() => setActiveTab('proposals')} />
+              <NavButton icon={<ListTodo size={18} />} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
+              <NavButton icon={<DollarSign size={18} />} label="Fluxo de Caixa" active={['cashflow', 'cashflow-categories', 'cashflow-all', 'cashflow-form'].includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
+              {(activeTab === 'cashflow' || activeTab === 'cashflow-categories' || activeTab === 'cashflow-all' || activeTab === 'cashflow-form') && (
+                <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-[var(--color-primary)]/20 pl-3">
+                  {([['cashflow', 'Por Mês'], ['cashflow-all', 'Todos os Lançamentos'], ['cashflow-categories', 'Categorias']] as const).map(([tab, label]) => {
+                    const on = activeTab === tab || (tab === 'cashflow' && activeTab === 'cashflow-form');
+                    return (
+                      <button key={tab} onClick={() => setActiveTab(tab)} className={`text-left text-[13px] px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${on ? 'text-[var(--color-primary)] bg-[var(--color-primary-50)]' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-white/50'}`}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]/70">Catálogo</p>
+              <NavButton icon={<Briefcase size={18} />} label="Serviços Base" active={activeTab === 'services' || activeTab === 'service-form'} onClick={() => setActiveTab('services')} />
+              <NavButton icon={<Layers size={18} />} label="Modelos de Seção" active={activeTab === 'section-templates' || activeTab === 'section-template-form'} onClick={() => setActiveTab('section-templates')} />
+              <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
+              <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
+            </div>
           </nav>
 
-          <div className="mt-auto border-t border-white/50 pt-6 flex flex-col gap-3">
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-10 h-10 rounded-full bg-white/60 shadow-inner flex items-center justify-center flex-shrink-0 text-[#C13584] border border-white/50">
+          <div className="border-t border-white/60 pt-4 flex flex-col gap-1">
+            <div className="flex items-center gap-3 px-2 py-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-primary-50)] to-white shadow-[inset_0_0_0_1px_rgba(193,53,132,0.15)] flex items-center justify-center flex-shrink-0 text-[var(--color-primary)] font-semibold text-sm">
                 {user?.email?.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-semibold text-gray-800 truncate">{user?.email}</p>
-                <p className="text-xs text-gray-500">Administrador</p>
+                <p className="text-sm font-semibold text-[var(--color-ink)] truncate">{user?.email}</p>
+                <p className="text-xs text-[var(--color-ink-3)]">Administrador</p>
               </div>
             </div>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex items-center gap-3 px-4 py-3 mt-2 rounded-xl font-medium transition-all cursor-pointer w-full text-left ${activeTab === 'settings' ? 'bg-white/60 shadow-sm border border-white/50 text-[#C13584] backdrop-blur-md' : 'text-gray-600 hover:bg-white/40'}`}
-            >
-              <Settings size={18} />
-              Configurações
-            </button>
+            <NavButton icon={<Settings size={18} />} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
             <button
               onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-3 px-4 py-3 mt-1 rounded-xl font-medium text-red-500 hover:bg-red-50/50 backdrop-blur-sm transition-all cursor-pointer w-full text-left"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50/70 transition-all cursor-pointer w-full text-left"
             >
-              <LogOut size={18} />
+              <LogOut size={18} className="text-rose-500" />
               Sair
             </button>
           </div>
@@ -241,8 +170,8 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto flex flex-col h-full print:overflow-visible">
-          <header className="h-20 flex-shrink-0 border-b border-white/40 bg-white/30 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-10 shadow-[0_4px_30px_rgba(0,0,0,0.02)] print:hidden">
-            <h2 className="text-2xl font-semibold capitalize text-gray-800">
+          <header className="h-[68px] flex-shrink-0 border-b glass-raised flex items-center justify-between px-8 sticky top-0 z-[20] print:hidden">
+            <h2 className="text-xl font-bold tracking-tight text-[var(--color-ink)]">
               {activeTab === 'dashboard' ? 'Visão Geral' :
                 activeTab === 'tasks' ? 'Tarefas' :
                   activeTab === 'proposals' ? 'Gestão de Propostas' :
@@ -265,52 +194,52 @@ function App() {
             </h2>
             <div className="flex items-center gap-4">
               {activeTab === 'proposals' && (
-                <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Nova Proposta
                 </button>
               )}
               {(activeTab === 'cashflow' || activeTab === 'cashflow-all') && (
-                <button onClick={() => { setSelectedCashFlow(null); setActiveTab('cashflow-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedCashFlow(null); setActiveTab('cashflow-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Registro
                 </button>
               )}
               {activeTab === 'cashflow-categories' && (
-                <span className="text-sm text-gray-500 italic">Gerencie as categorias abaixo</span>
+                <span className="text-sm text-[var(--color-ink-3)] italic">Gerencie as categorias abaixo</span>
               )}
               {activeTab === 'dashboard' && (
-                <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Criar Rápido
                 </button>
               )}
               {activeTab === 'services' && (
-                <button id="btn-new-service" onClick={() => { setSelectedService(null); setActiveTab('service-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button id="btn-new-service" onClick={() => { setSelectedService(null); setActiveTab('service-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Serviço
                 </button>
               )}
               {activeTab === 'section-templates' && (
-                <button onClick={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Modelo
                 </button>
               )}
               {activeTab === 'contracts' && (
-                <button onClick={() => setActiveTab('contract-templates')} className="border border-[#C13584]/30 text-[#C13584] bg-white hover:bg-pink-50 cursor-pointer px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => setActiveTab('contract-templates')} className="btn-outline-brand">
                   <ScrollText size={18} />
                   Modelos de Contrato
                 </button>
               )}
               {activeTab === 'contract-templates' && (
-                <button onClick={() => { setSelectedContractTemplate(null); setActiveTab('contract-template-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedContractTemplate(null); setActiveTab('contract-template-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Modelo
                 </button>
               )}
               {activeTab === 'clients' && (
-                <button onClick={() => { setSelectedClient(null); setActiveTab('client-form'); }} className="bg-[#C13584] hover:bg-[#A42D70] cursor-pointer text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm">
+                <button onClick={() => { setSelectedClient(null); setActiveTab('client-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Cliente
                 </button>
@@ -492,6 +421,20 @@ function App() {
 // -------------------------------------------------------------
 // CURRENCY INPUT (BRL formatted)
 // -------------------------------------------------------------
+function NavButton({ icon, label, active, onClick }: { icon: ReactNode; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer border ${active
+        ? 'bg-white/80 shadow-[0_1px_3px_rgba(27,20,32,0.07)] border-white/80 text-[var(--color-primary)]'
+        : 'border-transparent text-[var(--color-ink-2)] hover:bg-white/50 hover:text-[var(--color-ink)]'}`}
+    >
+      <span className={active ? 'text-[var(--color-primary)]' : 'text-[var(--color-ink-3)] group-hover:text-[var(--color-ink-2)] transition-colors'}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 function CurrencyInput({
   value,
   onChange,
@@ -505,7 +448,7 @@ function CurrencyInput({
   placeholder?: string;
   className?: string;
 }) {
-  const baseClass = 'w-full border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner';
+  const baseClass = 'field-input';
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState('');
 
@@ -533,7 +476,7 @@ function CurrencyInput({
 
   return (
     <div className={`relative ${className}`}>
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 select-none pointer-events-none z-10">R$</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--color-ink-3)] select-none pointer-events-none z-10">R$</span>
       <input
         type="text"
         inputMode="decimal"
@@ -679,7 +622,7 @@ function TemplateVarChips() {
   };
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
-      <span className="text-xs text-gray-400 self-center mr-1">Variáveis:</span>
+      <span className="text-xs text-[var(--color-ink-3)] self-center mr-1">Variáveis:</span>
       {TEMPLATE_VARS.map(v => (
         <button
           key={v.key}
@@ -797,18 +740,18 @@ function DashboardView({ proposals, cashFlows }: { proposals: any[], cashFlows: 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="col-span-2 bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">Desempenho Financeiro (MVP)</h3>
-          <div className="h-64 flex flex-col items-center justify-center border border-dashed border-gray-300/50 rounded-xl bg-white/30 text-gray-400 gap-4 backdrop-blur-sm">
-            <BarChart3 size={48} className="text-gray-300" />
+        <div className="col-span-2 glass-panel p-6">
+          <h3 className="panel-title mb-6">Desempenho Financeiro</h3>
+          <div className="h-64 flex flex-col items-center justify-center glass-inset border-dashed text-[var(--color-ink-3)] gap-3">
+            <BarChart3 size={40} className="text-[var(--color-ink-3)]/50" />
             <p className="text-sm">Os gráficos de série temporal estarão disponíveis nas próximas etapas.</p>
           </div>
         </div>
-        <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.04)]">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">Últimos Lançamentos</h3>
+        <div className="glass-panel p-6">
+          <h3 className="panel-title mb-6">Últimos Lançamentos</h3>
           <div className="flex flex-col gap-6">
             {recentCashFlows.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Nenhum lançamento.</p>
+              <p className="text-sm text-[var(--color-ink-3)] italic">Nenhum lançamento.</p>
             ) : (
               recentCashFlows.map(c => (
                 <div key={c.id} className="flex items-center gap-4">
@@ -816,8 +759,8 @@ function DashboardView({ proposals, cashFlows }: { proposals: any[], cashFlows: 
                     {c.type === 'Income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
                   </div>
                   <div className="flex-1 overflow-hidden">
-                    <p className="font-medium text-sm text-gray-800 truncate">{c.description || 'Sem descrição'}</p>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')} • {c.status === 'Paid' ? 'Pago' : 'Pendente'}</p>
+                    <p className="font-medium text-sm text-[var(--color-ink)] truncate">{c.description || 'Sem descrição'}</p>
+                    <p className="text-xs text-[var(--color-ink-3)] mt-1">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')} • {c.status === 'Paid' ? 'Pago' : 'Pendente'}</p>
                   </div>
                   <p className={`font-semibold text-sm whitespace-nowrap ${c.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
                     {c.type === 'Income' ? '+' : '-'} R$ {fmtBRL(Number(c.value))}
@@ -834,16 +777,16 @@ function DashboardView({ proposals, cashFlows }: { proposals: any[], cashFlows: 
 
 function SummaryCard({ title, value, icon, trend, trendUp }: any) {
   return (
-    <div className="bg-white/50 backdrop-blur-lg p-6 rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] flex flex-col gap-4 transition-all hover:-translate-y-1 hover:shadow-[0_12px_48px_rgba(0,0,0,0.08)] duration-300">
+    <div className="glass-card glass-card-hover p-6 flex flex-col gap-4">
       <div className="flex justify-between items-center">
-        <p className="text-sm font-medium text-gray-500">{title}</p>
-        <div className="p-2 bg-white/60 backdrop-blur-md shadow-inner border border-white/50 rounded-xl">
+        <p className="text-sm font-medium text-[var(--color-ink-3)]">{title}</p>
+        <div className="p-2 glass-inset">
           {icon}
         </div>
       </div>
       <div>
-        <h3 className="text-2xl font-bold text-[#1c1c1e]">{value}</h3>
-        <p className={`text-sm mt-2 flex items-center gap-1 font-medium ${trendUp ? 'text-green-600' : 'text-red-500'}`}>
+        <h3 className="text-2xl font-bold text-[var(--color-ink)] tracking-tight">{value}</h3>
+        <p className={`text-sm mt-1.5 flex items-center gap-1 font-medium ${trendUp ? 'text-emerald-600' : 'text-rose-500'}`}>
           {trendUp ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
           {trend}
         </p>
@@ -937,15 +880,15 @@ function ApprovalModal({ target, onClose, onDone }: {
         <div className="px-6 pt-5 pb-3 border-b border-gray-100">
           <div className="flex justify-between items-center text-sm">
             <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Cliente</p>
-              <p className="font-bold text-gray-800 text-base">{clientName}</p>
+              <p className="text-[var(--color-ink-3)] text-xs uppercase tracking-wider">Cliente</p>
+              <p className="font-bold text-[var(--color-ink)] text-base">{clientName}</p>
             </div>
             <div className="text-right">
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Serviço</p>
-              <p className="font-medium text-gray-700">{serviceType}</p>
+              <p className="text-[var(--color-ink-3)] text-xs uppercase tracking-wider">Serviço</p>
+              <p className="font-medium text-[var(--color-ink-2)]">{serviceType}</p>
             </div>
             <div className="text-right">
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Valor Líquido</p>
+              <p className="text-[var(--color-ink-3)] text-xs uppercase tracking-wider">Valor Líquido</p>
               <p className="font-bold text-green-600 text-lg">R$ {fmtBRL(netValue)}</p>
             </div>
           </div>
@@ -953,10 +896,10 @@ function ApprovalModal({ target, onClose, onDone }: {
 
         {/* Installments table */}
         <div className="px-6 py-4 max-h-72 overflow-y-auto">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Parcelas a lançar ({installments.length}x)</p>
+          <p className="text-xs font-semibold text-[var(--color-ink-3)] uppercase tracking-wider mb-3">Parcelas a lançar ({installments.length}x)</p>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-400 text-xs border-b border-gray-100">
+              <tr className="text-[var(--color-ink-3)] text-xs border-b border-gray-100">
                 <th className="pb-2 text-left font-medium w-8">#</th>
                 <th className="pb-2 text-left font-medium">Data de Vencimento</th>
                 <th className="pb-2 text-left font-medium">Valor (R$)</th>
@@ -972,7 +915,7 @@ function ApprovalModal({ target, onClose, onDone }: {
                   </td>
                   <td className="py-2">
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-ink-3)] font-medium">R$</span>
                       <input type="number" step="0.01" value={inst.value}
                         onChange={e => updateValue(i, parseFloat(e.target.value) || 0)}
                         className="border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-36" />
@@ -983,7 +926,7 @@ function ApprovalModal({ target, onClose, onDone }: {
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-200">
-                <td colSpan={2} className="pt-3 font-semibold text-gray-600 text-sm">Total das Parcelas</td>
+                <td colSpan={2} className="pt-3 font-semibold text-[var(--color-ink-2)] text-sm">Total das Parcelas</td>
                 <td className="pt-3">
                   <span className={`font-bold text-sm ${isBalanced ? 'text-green-600' : 'text-orange-500'}`}>
                     R$ {fmtBRL(totalInstallments)}
@@ -1005,7 +948,7 @@ function ApprovalModal({ target, onClose, onDone }: {
         {/* Actions */}
         <div className="px-6 pb-6 flex gap-3 justify-end border-t border-gray-100 pt-4">
           <button type="button" onClick={onClose} disabled={loading}
-            className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
+            className="px-5 py-2.5 border border-gray-200 text-[var(--color-ink-2)] rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
             Cancelar
           </button>
           <button type="button" onClick={handleConfirm} disabled={loading}
@@ -1083,8 +1026,8 @@ function GanttChart({ phases, startDate }: { phases: { name: string; duration_da
     <div className="mt-2 bg-white/30 rounded-2xl border border-white/50 p-5">
       <div className="flex items-center gap-2 mb-4">
         <BarChart3 size={15} className="text-[#C13584]" />
-        <span className="text-sm font-semibold text-gray-700">Gráfico de Gantt</span>
-        <span className="ml-auto text-xs text-gray-400">{totalDays} dias úteis</span>
+        <span className="text-sm font-semibold text-[var(--color-ink-2)]">Gráfico de Gantt</span>
+        <span className="ml-auto text-xs text-[var(--color-ink-3)]">{totalDays} dias úteis</span>
       </div>
 
       {/* Date markers */}
@@ -1092,7 +1035,7 @@ function GanttChart({ phases, startDate }: { phases: { name: string; duration_da
         {markers.map((m, i) => (
           <div
             key={i}
-            className="absolute top-0 text-[9px] text-gray-400 whitespace-nowrap"
+            className="absolute top-0 text-[9px] text-[var(--color-ink-3)] whitespace-nowrap"
             style={{ left: `${m.pct}%`, transform: 'translateX(-50%)' }}
           >
             {m.label}
@@ -1105,7 +1048,7 @@ function GanttChart({ phases, startDate }: { phases: { name: string; duration_da
         {rows.map((row, idx) => (
           <div key={idx} className="flex items-center gap-2">
             <div className="w-24 flex-shrink-0 text-right">
-              <span className="text-[11px] font-medium text-gray-600 block truncate" title={row.name}>{row.name}</span>
+              <span className="text-[11px] font-medium text-[var(--color-ink-2)] block truncate" title={row.name}>{row.name}</span>
             </div>
             <div className="relative flex-1 h-6 bg-gray-100/80 rounded-full overflow-hidden">
               {markers.map((m, i) => i > 0 && (
@@ -1121,16 +1064,16 @@ function GanttChart({ phases, startDate }: { phases: { name: string; duration_da
               </div>
             </div>
             <div className="w-14 flex-shrink-0 text-right">
-              {row.endLabel && <span className="text-[10px] text-gray-400">até {row.endLabel}</span>}
+              {row.endLabel && <span className="text-[10px] text-[var(--color-ink-3)]">até {row.endLabel}</span>}
             </div>
           </div>
         ))}
       </div>
 
       {startDate && (
-        <div className="mt-3 pt-3 border-t border-white/40 text-xs text-gray-500 flex gap-4">
-          <span>Início: <strong className="text-gray-700">{new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
-          <span>Entrega: <strong className="text-gray-700">{calculateBusinessEndDate(startDate, totalDays)?.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
+        <div className="mt-3 pt-3 border-t border-white/40 text-xs text-[var(--color-ink-3)] flex gap-4">
+          <span>Início: <strong className="text-[var(--color-ink-2)]">{new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
+          <span>Entrega: <strong className="text-[var(--color-ink-2)]">{calculateBusinessEndDate(startDate, totalDays)?.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</strong></span>
         </div>
       )}
     </div>
@@ -1204,25 +1147,25 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
         )}
         <div className="h-12 w-px bg-gray-300 mx-2"></div>
         <div>
-          <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Proposta de</p>
+          <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase">Proposta de</p>
           <p className="text-2xl font-black tracking-tight text-[#C13584] uppercase mt-1">{proposal.service_type || 'Serviço'}</p>
         </div>
-        <div className="ml-auto text-right text-xs text-gray-400">
+        <div className="ml-auto text-right text-xs text-[var(--color-ink-3)]">
           <p>Emissão: {new Date().toLocaleDateString('pt-BR')}</p>
-          <p className="font-mono font-bold text-gray-600 mt-1">#{propId}</p>
+          <p className="font-mono font-bold text-[var(--color-ink-2)] mt-1">#{propId}</p>
         </div>
       </div>
 
       {/* Client info */}
       {client && (
         <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Preparado para</p>
-          <p className="text-xl font-bold text-gray-900">{client.company_name || client.name}</p>
-          {client.company_name && <p className="text-sm text-gray-600">{client.name}</p>}
+          <p className="text-xs text-[var(--color-ink-3)] uppercase tracking-wider mb-1">Preparado para</p>
+          <p className="text-xl font-bold text-[var(--color-ink)]">{client.company_name || client.name}</p>
+          {client.company_name && <p className="text-sm text-[var(--color-ink-2)]">{client.name}</p>}
         </div>
       )}
 
-      <div className="space-y-10 text-gray-800 text-sm">
+      <div className="space-y-10 text-[var(--color-ink)] text-sm">
         {proposal.vision_text && (
           <section>
             <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">1. Visão Geral do Projeto</h3>
@@ -1244,7 +1187,7 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
         {phases.length > 0 && (
           <section>
             <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">4. Cronograma Estimado</h3>
-            <p className="mb-4 text-gray-600">
+            <p className="mb-4 text-[var(--color-ink-2)]">
               O projeto será executado em <strong>{phases.length} fases</strong>, totalizando <strong>{totalBusinessDays} dias úteis</strong>
               {proposal.start_date ? `, com início previsto para ${new Date(proposal.start_date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })} e entrega prevista para ${endDateStr}` : ''}.
             </p>
@@ -1307,7 +1250,7 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
         <section>
           <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">5. Investimento e Condições de Pagamento</h3>
           {proposal.investment_text && (
-            <div className="mb-6 leading-relaxed text-gray-700" dangerouslySetInnerHTML={{ __html: rv(proposal.investment_text) }} />
+            <div className="mb-6 leading-relaxed text-[var(--color-ink-2)]" dangerouslySetInnerHTML={{ __html: rv(proposal.investment_text) }} />
           )}
 
           {upfrontPrice && (
@@ -1350,7 +1293,7 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
           </table>
           {installments.length > 0 && (
             <>
-              <p className="font-semibold text-gray-700 mb-3">Condições de Pagamento — {installments.length}x parcela(s):</p>
+              <p className="font-semibold text-[var(--color-ink-2)] mb-3">Condições de Pagamento — {installments.length}x parcela(s):</p>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#fdf2f8', borderBottom: '2px solid #C13584' }}>
@@ -1377,7 +1320,7 @@ function ProposalPrintDocument({ proposal, client, sectionTemplates }: { proposa
               </table>
             </>
           )}
-          <p className="mt-10 pt-6 border-t border-gray-200 text-xs text-gray-400">
+          <p className="mt-10 pt-6 border-t border-gray-200 text-xs text-[var(--color-ink-3)]">
             Este documento é uma proposta comercial com validade de 15 dias a partir da data de emissão.
             Estamos prontos para iniciar o projeto imediatamente após a sua aprovação.
           </p>
@@ -1403,10 +1346,10 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
 
   const getStatusBadge = (status: ProposalStatus) => {
     switch (status) {
-      case 'Draft': return <span className="px-2.5 py-1 bg-yellow-100/80 backdrop-blur-sm text-yellow-700 rounded-lg text-xs font-semibold">Rascunho</span>;
-      case 'Sent': return <span className="px-2.5 py-1 bg-blue-100/80 backdrop-blur-sm text-blue-700 rounded-lg text-xs font-semibold">Enviado</span>;
-      case 'Approved': return <span className="px-2.5 py-1 bg-green-100/80 backdrop-blur-sm text-green-700 rounded-lg text-xs font-semibold">Aprovado</span>;
-      case 'Rejected': return <span className="px-2.5 py-1 bg-red-100/80 backdrop-blur-sm text-red-700 rounded-lg text-xs font-semibold">Rejeitado</span>;
+      case 'Draft': return <span className="badge badge-warning">Rascunho</span>;
+      case 'Sent': return <span className="badge badge-info">Enviado</span>;
+      case 'Approved': return <span className="badge badge-success">Aprovado</span>;
+      case 'Rejected': return <span className="badge badge-danger">Rejeitado</span>;
       default: return null;
     }
   };
@@ -1432,25 +1375,25 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
         <div className="relative">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por número, cliente ou serviço..."
-            className="pl-4 pr-10 py-2 border border-white/60 bg-white/40 backdrop-blur-sm rounded-xl text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#C13584] focus:bg-white/80 transition-all shadow-inner"
+            className="field-input w-80 pr-10"
           />
         </div>
-        <button className="flex items-center gap-2 text-sm text-gray-600 border border-white/60 bg-white/40 backdrop-blur-sm px-4 py-2 rounded-xl hover:bg-white/60 cursor-pointer transition-colors font-medium shadow-sm">
+        <button className="btn-secondary">
           <Filter size={16} />
           Filtrar
         </button>
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium w-24">Nº</th>
             <th className="p-4 font-medium">Cliente / Serviço</th>
             <th className="p-4 font-medium">Valor</th>
@@ -1463,27 +1406,27 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
         <tbody className="text-sm">
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={7} className="p-8 text-center text-gray-500">
+              <td colSpan={7} className="p-8 text-center text-[var(--color-ink-3)]">
                 {search ? `Nenhuma proposta encontrada para "${search}".` : 'Nenhuma proposta cadastrada ainda.'}
               </td>
             </tr>
           ) : (
             filtered.map((p) => (
-              <tr key={p.proposal.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+              <tr key={p.proposal.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
                 <td className="p-4 pl-6">
                   <span className="inline-block font-mono font-bold text-xs text-[#C13584] bg-pink-50 border border-pink-100 px-2 py-1 rounded-lg tracking-widest">
                     #{proposalNumber(p.proposal.id)}
                   </span>
                 </td>
                 <td className="p-4">
-                  <div className="font-bold text-gray-900">{p.client?.name || 'Cliente Removido'}</div>
-                  <div className="text-sm text-gray-500 font-normal mt-0.5">{p.proposal.service_type}</div>
-                  <div className="text-xs text-gray-400 font-normal mt-0.5">{new Date(p.proposal.created_at).toLocaleDateString('pt-BR')}</div>
+                  <div className="font-bold text-[var(--color-ink)]">{p.client?.name || 'Cliente Removido'}</div>
+                  <div className="text-sm text-[var(--color-ink-3)] font-normal mt-0.5">{p.proposal.service_type}</div>
+                  <div className="text-xs text-[var(--color-ink-3)] font-normal mt-0.5">{new Date(p.proposal.created_at).toLocaleDateString('pt-BR')}</div>
                 </td>
-                <td className="p-4 font-medium text-gray-700">
+                <td className="p-4 font-medium text-[var(--color-ink-2)]">
                   <span className="whitespace-nowrap">R$ {Number(p.proposal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </td>
-                <td className="p-4 font-medium text-gray-700">
+                <td className="p-4 font-medium text-[var(--color-ink-2)]">
                   {(() => {
                     const content = p.proposal.content_json as { discountAmt?: number; netValue?: number } | null;
                     const discountAmt = Number(content?.discountAmt) || 0;
@@ -1499,19 +1442,19 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
                       : content?.brand === 'procurada' ? 'procurada'
                       : 'octo';
                     if (brand === 'vinicius') {
-                      return <span className="px-2.5 py-1 bg-purple-100/80 backdrop-blur-sm text-purple-700 rounded-lg text-xs font-semibold whitespace-nowrap">Vinicius Kolling</span>;
+                      return <span className="badge badge-purple">Vinicius Kolling</span>;
                     }
                     if (brand === 'procurada') {
-                      return <span className="px-2.5 py-1 bg-amber-100/80 backdrop-blur-sm text-amber-700 rounded-lg text-xs font-semibold whitespace-nowrap">agência Procurada</span>;
+                      return <span className="badge badge-warning">agência Procurada</span>;
                     }
-                    return <span className="px-2.5 py-1 bg-pink-100/80 backdrop-blur-sm text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">agência OCTO.</span>;
+                    return <span className="badge badge-brand">agência OCTO.</span>;
                   })()}
                 </td>
                 <td className="p-4">
                   {getStatusBadge(p.proposal.status)}
                 </td>
                 <td className="p-4 pr-6 text-right">
-                  <div className="flex items-center justify-end gap-3 text-gray-400">
+                  <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                     {p.proposal.status !== 'Approved' && (
                       <button onClick={() => onApproveProposal(p)} className="hover:text-green-600 transition-colors cursor-pointer" title="Aprovar Proposta">
                         <CheckCircle size={16} />
@@ -1576,12 +1519,12 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       {/* Tabs */}
-      <div className="flex gap-2 bg-white/50 backdrop-blur-md rounded-2xl p-1.5 border border-white/60 shadow-sm w-fit">
+      <div className="flex gap-2 glass-card p-1.5 w-fit">
         {(['Income', 'Expense'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${tab === t
               ? t === 'Income' ? 'bg-green-500 text-white shadow-md' : 'bg-red-500 text-white shadow-md'
-              : 'text-gray-500 hover:bg-white/60'
+              : 'text-[var(--color-ink-3)] hover:bg-white/60'
               }`}>
             {t === 'Income' ? '➕ Receitas' : '➖ Despesas'}
           </button>
@@ -1589,19 +1532,19 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
       </div>
 
       {/* Add form */}
-      <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 p-6 shadow-sm">
-        <h4 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wider">
+      <div className="glass-panel p-6">
+        <h4 className="font-semibold text-[var(--color-ink-2)] mb-4 text-sm uppercase tracking-wider">
           Nova categoria de {tab === 'Income' ? 'Receita' : 'Despesa'}
         </h4>
         <form onSubmit={handleAdd} className="flex items-end gap-3">
           <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
+            <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Nome</label>
             <input type="text" value={newName} onChange={e => setNewName(e.target.value)} required
               placeholder={tab === 'Income' ? 'Ex: Mensalidade, Consultoria...' : 'Ex: Aluguel, Fornecedor...'}
-              className="w-full border border-white/60 rounded-xl px-4 py-2.5 text-sm bg-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#C13584]" />
+              className="field-input" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Cor</label>
+            <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Cor</label>
             <div className="flex gap-1.5 flex-wrap w-48">
               {PRESET_COLORS.map(c => (
                 <button key={c} type="button" onClick={() => setNewColor(c)}
@@ -1612,7 +1555,7 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
             </div>
           </div>
           <button type="submit" disabled={saving}
-            className="px-5 py-2.5 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shadow-md flex-shrink-0">
+            className="px-5 py-2.5 btn-primary flex-shrink-0">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             Adicionar
           </button>
@@ -1620,19 +1563,19 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
       </div>
 
       {/* Category list */}
-      <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-sm overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <div className="p-4 border-b border-white/40 bg-white/20">
-          <p className="text-sm font-semibold text-gray-600">{filtered.length} categoria{filtered.length !== 1 ? 's' : ''} de {tab === 'Income' ? 'Receita' : 'Despesa'}</p>
+          <p className="text-sm font-semibold text-[var(--color-ink-2)]">{filtered.length} categoria{filtered.length !== 1 ? 's' : ''} de {tab === 'Income' ? 'Receita' : 'Despesa'}</p>
         </div>
         {filtered.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Nenhuma categoria cadastrada ainda.</div>
+          <div className="p-8 text-center text-[var(--color-ink-3)] text-sm">Nenhuma categoria cadastrada ainda.</div>
         ) : (
           <ul className="divide-y divide-white/30">
             {filtered.map(cat => (
               <li key={cat.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                  <span className="text-sm font-medium text-gray-800">{cat.name}</span>
+                  <span className="text-sm font-medium text-[var(--color-ink)]">{cat.name}</span>
                 </div>
                 <button onClick={() => handleDelete(cat.id)} disabled={deleting === cat.id}
                   className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer p-1">
@@ -1727,26 +1670,26 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
       {/* Filters row */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-3)] pointer-events-none" />
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por descrição ou categoria..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm bg-white/60 border border-white/60 rounded-xl backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-[#C13584]" />
+            className="field-input pl-9" />
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
-          className="text-sm bg-white/60 border border-white/60 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#C13584] backdrop-blur-sm cursor-pointer">
+          className="field-input cursor-pointer">
           <option value="all">Todos os tipos</option>
           <option value="Income">Receitas</option>
           <option value="Expense">Despesas</option>
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-          className="text-sm bg-white/60 border border-white/60 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#C13584] backdrop-blur-sm cursor-pointer">
+          className="field-input cursor-pointer">
           <option value="all">Todos os status</option>
           <option value="Paid">Pago</option>
           <option value="Pending">Pendente</option>
         </select>
         <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-          className="text-sm bg-white/60 border border-white/60 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#C13584] backdrop-blur-sm cursor-pointer">
+          className="field-input cursor-pointer">
           <option value="all">Todas as categorias</option>
           {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
@@ -1772,18 +1715,18 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
             {isBulkDeleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
             Excluir Selecionados
           </button>
-          <button onClick={() => setSelected(new Set())} className="text-gray-400 hover:text-gray-600 cursor-pointer text-sm">Cancelar</button>
+          <button onClick={() => setSelected(new Set())} className="text-[var(--color-ink-3)] hover:text-[var(--color-ink-2)] cursor-pointer text-sm">Cancelar</button>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-sm overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <div className="p-3 border-b border-white/40 bg-white/20 flex items-center gap-2">
-          <p className="text-xs text-gray-500 font-medium">{filtered.length} lançamento(s) encontrado(s)</p>
+          <p className="text-xs text-[var(--color-ink-3)] font-medium">{filtered.length} lançamento(s) encontrado(s)</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/60 text-xs text-gray-500 uppercase tracking-wider">
+            <thead className="bg-gray-50/60 text-xs text-[var(--color-ink-3)] uppercase tracking-wider">
               <tr>
                 <th className="p-3 pl-4 text-left w-10">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
@@ -1800,7 +1743,7 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
             </thead>
             <tbody className="divide-y divide-gray-100/60">
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-10 text-center text-gray-400 text-sm">Nenhum lançamento encontrado.</td></tr>
+                <tr><td colSpan={8} className="p-10 text-center text-[var(--color-ink-3)] text-sm">Nenhum lançamento encontrado.</td></tr>
               ) : (
                 filtered.map(c => {
                   const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
@@ -1812,8 +1755,8 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(c.id)}
                           className="w-4 h-4 rounded accent-[#C13584] cursor-pointer" />
                       </td>
-                      <td className="p-3 text-gray-500 whitespace-nowrap font-medium">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                      <td className="p-3 text-gray-800 max-w-[200px] truncate">{c.description || <span className="text-gray-400 italic">Sem descrição</span>}</td>
+                      <td className="p-3 text-[var(--color-ink-3)] whitespace-nowrap font-medium">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td className="p-3 text-[var(--color-ink)] max-w-[200px] truncate">{c.description || <span className="text-[var(--color-ink-3)] italic">Sem descrição</span>}</td>
                       <td className="p-3">
                         <span className="px-2 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1"
                           style={{ backgroundColor: color + '1A', color, border: `1px solid ${color}40` }}>
@@ -1823,19 +1766,19 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
                       </td>
                       <td className="p-3">
                         {c.type === 'Income'
-                          ? <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">Receita</span>
-                          : <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-semibold">Despesa</span>}
+                          ? <span className="badge badge-success">Receita</span>
+                          : <span className="badge badge-danger">Despesa</span>}
                       </td>
                       <td className={`p-3 text-right font-semibold whitespace-nowrap ${c.type === 'Income' ? 'text-green-600' : 'text-red-500'}`}>
                         {c.type === 'Income' ? '+' : '-'} R$ {fmtBRL(Number(c.value))}
                       </td>
                       <td className="p-3 text-center">
                         {c.status === 'Paid'
-                          ? <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">Pago</span>
-                          : <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold">Pendente</span>}
+                          ? <span className="badge badge-success">Pago</span>
+                          : <span className="badge badge-warning">Pendente</span>}
                       </td>
                       <td className="p-3 pr-4 text-right">
-                        <div className="flex items-center justify-end gap-3 text-gray-400">
+                        <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                           <button onClick={() => onEditCashFlow(c)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                             <Edit2 size={15} />
                           </button>
@@ -1909,20 +1852,20 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* Navigation Header */}
-      <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] p-4 flex justify-between items-center">
-        <h3 className="font-semibold text-lg text-gray-800">Fluxo de Caixa</h3>
+      <div className="glass-panel p-4 flex justify-between items-center">
+        <h3 className="font-semibold text-lg text-[var(--color-ink)]">Fluxo de Caixa</h3>
         <div className="flex items-center gap-4">
-          <button onClick={handleCurrentMonth} className="px-4 py-1.5 text-xs font-medium bg-white/60 border border-white/80 rounded-lg hover:bg-white text-gray-600 transition-colors shadow-sm">
+          <button onClick={handleCurrentMonth} className="btn-secondary text-xs px-4 py-1.5">
             Mês Atual
           </button>
           <div className="flex items-center gap-2 bg-white/60 border border-white/80 rounded-xl p-1 shadow-sm">
-            <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-500 cursor-pointer">
+            <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer">
               <ChevronLeft size={18} />
             </button>
-            <span className="font-semibold text-sm w-32 text-center text-gray-700">
+            <span className="font-semibold text-sm w-32 text-center text-[var(--color-ink-2)]">
               {monthName} {currentYear}
             </span>
-            <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-500 cursor-pointer">
+            <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer">
               <ChevronRight size={18} />
             </button>
           </div>
@@ -1931,25 +1874,25 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 shadow-sm">
-          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Receitas do Mês</p>
+        <div className="glass-card p-5">
+          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Receitas do Mês</p>
           <p className="text-2xl font-bold text-green-600">R$ {fmtBRL(totalIncome)}</p>
         </div>
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 shadow-sm">
-          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Despesas do Mês</p>
+        <div className="glass-card p-5">
+          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Despesas do Mês</p>
           <p className="text-2xl font-bold text-red-500">R$ {fmtBRL(totalExpense)}</p>
         </div>
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-white/60 p-5 shadow-sm">
-          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1">Saldo do Mês</p>
+        <div className="glass-card p-5">
+          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Saldo do Mês</p>
           <p className={`text-2xl font-bold ${balance >= 0 ? 'text-[#C13584]' : 'text-red-600'}`}>R$ {fmtBRL(balance)}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
+      <div className="glass-panel overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+            <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
               <th className="p-4 pl-6 font-medium">Data</th>
               <th className="p-4 font-medium">Descrição</th>
               <th className="p-4 font-medium">Categoria</th>
@@ -1961,13 +1904,13 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
           <tbody className="text-sm">
             {filteredCashFlows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-gray-500">Nenhum lançamento no fluxo de caixa para este mês.</td>
+                <td colSpan={6} className="p-8 text-center text-[var(--color-ink-3)]">Nenhum lançamento no fluxo de caixa para este mês.</td>
               </tr>
             ) : (
               filteredCashFlows.map(c => (
                 <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
-                  <td className="p-4 pl-6 text-gray-500 font-medium whitespace-nowrap">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                  <td className="p-4 font-medium text-gray-800">{c.description || '-'}</td>
+                  <td className="p-4 pl-6 text-[var(--color-ink-3)] font-medium whitespace-nowrap">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
+                  <td className="p-4 font-medium text-[var(--color-ink)]">{c.description || '-'}</td>
                   <td className="p-4">
                     {(() => {
                       const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
@@ -1986,13 +1929,13 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
                   </td>
                   <td className="p-4 text-right">
                     {c.status === 'Paid' ? (
-                      <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold inline-block">Pago</span>
+                      <span className="badge badge-success">Pago</span>
                     ) : (
-                      <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-xs font-semibold inline-block">Pendente</span>
+                      <span className="badge badge-warning">Pendente</span>
                     )}
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                       <button onClick={() => onEditCashFlow(c)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                         <Edit2 size={16} />
                       </button>
@@ -2277,24 +2220,24 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 
   return (
     <>
-      <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto print:hidden">
+      <div className="glass-panel overflow-hidden max-w-4xl mx-auto print:hidden">
         <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-          <h3 className="font-semibold text-xl text-gray-800">
+          <h3 className="font-semibold text-xl text-[var(--color-ink)]">
             {isEditing ? 'Editar Proposta' : 'Criar Nova Proposta'}
           </h3>
-          <p className="text-sm text-gray-600 mt-1">Defina o escopo, projeto e valores.</p>
+          <p className="text-sm text-[var(--color-ink-2)] mt-1">Defina o escopo, projeto e valores.</p>
         </div>
 
         <div className="p-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
             {/* CLIENT SECTION */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+              <label className="field-label">Cliente</label>
               <div className="flex gap-2 mb-3">
-                <button type="button" onClick={() => setClientMode('existing')} className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${clientMode === 'existing' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-gray-600 border-white/60 hover:bg-white/60'}`}>
+                <button type="button" onClick={() => setClientMode('existing')} className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${clientMode === 'existing' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60 hover:bg-white/60'}`}>
                   Selecionar Existente
                 </button>
-                <button type="button" onClick={() => setClientMode('new')} className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${clientMode === 'new' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-gray-600 border-white/60 hover:bg-white/60'}`}>
+                <button type="button" onClick={() => setClientMode('new')} className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${clientMode === 'new' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60 hover:bg-white/60'}`}>
                   + Novo Cliente
                 </button>
               </div>
@@ -2303,7 +2246,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   required
                   value={selectedClientId}
                   onChange={e => setSelectedClientId(e.target.value)}
-                  className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800"
+                  className="field-input text-[var(--color-ink)]"
                 >
                   <option value="">Selecione um cliente...</option>
                   {clients.map(c => (
@@ -2317,23 +2260,23 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   placeholder="Nome do novo cliente..."
                   value={clientName}
                   onChange={e => setClientName(e.target.value)}
-                  className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                  className="field-input"
                 />
               )}
             </div>
 
             {/* SERVICES SECTION */}
             <div className="flex flex-col gap-4 p-6 bg-white/30 rounded-2xl border border-white/50">
-              <h4 className="font-semibold text-gray-800 text-lg">Serviços</h4>
+              <h4 className="font-semibold text-[var(--color-ink)] text-lg">Serviços</h4>
 
               {/* First service */}
               <div className="flex flex-col gap-2">
-                <label className="block text-sm font-medium text-gray-700">Serviço Principal (Carrega o Modelo)</label>
+                <label className="block text-sm font-medium text-[var(--color-ink-2)]">Serviço Principal (Carrega o Modelo)</label>
                 <div className="flex gap-3 items-center">
                   <select
                     value={serviceId}
                     onChange={e => handleApplyService(e.target.value)}
-                    className="flex-1 border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800"
+                    className="flex-1 field-input"
                   >
                     <option value="">Selecione para carregar informações...</option>
                     {services.map(s => <option key={s.id} value={s.id}>{s.name} - R$ {s.base_price}</option>)}
@@ -2347,7 +2290,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
               {/* Extra services */}
               {extraServices.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <label className="block text-sm font-medium text-gray-700">Serviços Adicionais</label>
+                  <label className="block text-sm font-medium text-[var(--color-ink-2)]">Serviços Adicionais</label>
                   {extraServices.map((es, i) => (
                     <div key={i} className="flex gap-3 items-center">
                       <input
@@ -2355,7 +2298,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                         placeholder="Nome do serviço..."
                         value={es.serviceType}
                         onChange={e => updateExtraService(i, 'serviceType', e.target.value)}
-                        className="flex-1 border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                        className="flex-1 field-input"
                       />
                       <div className="w-44">
                         <CurrencyInput value={es.value} onChange={v => updateExtraService(i, 'value', v)} />
@@ -2374,8 +2317,8 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   + Adicionar Serviço
                 </button>
                 {extraServices.length > 0 && (
-                  <p className="text-sm text-gray-600">
-                    Total Bruto: <span className="font-bold text-gray-800">R$ {fmtBRL(grossValue)}</span>
+                  <p className="text-sm text-[var(--color-ink-2)]">
+                    Total Bruto: <span className="font-bold text-[var(--color-ink)]">R$ {fmtBRL(grossValue)}</span>
                   </p>
                 )}
               </div>
@@ -2383,20 +2326,20 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 
             {/* INVESTMENT & PAYMENT */}
             <div className="flex flex-col gap-5 p-6 bg-white/30 rounded-2xl border border-white/50">
-              <h4 className="font-semibold text-gray-800 text-lg">Investimento e Condições de Pagamento</h4>
+              <h4 className="font-semibold text-[var(--color-ink)] text-lg">Investimento e Condições de Pagamento</h4>
 
               {/* Gross value + status + start date + brand */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Bruto Total (R$)</label>
-                  <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-gray-800 font-semibold">
+                  <label className="field-label">Valor Bruto Total (R$)</label>
+                  <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-[var(--color-ink)] font-semibold">
                     R$ {fmtBRL(grossValue)}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <label className="field-label">Status</label>
                   <select value={status} onChange={e => setStatus(e.target.value as ProposalStatus)}
-                    className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800">
+                    className="field-input text-[var(--color-ink)]">
                     <option value="Draft">Rascunho</option>
                     <option value="Sent">Enviado</option>
                     <option value="Approved">Aprovado</option>
@@ -2404,14 +2347,14 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Data Inicial (Cronograma)</label>
+                  <label className="field-label">Data Inicial (Cronograma)</label>
                   <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" />
+                    className="field-input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cabeçalho</label>
+                  <label className="field-label">Cabeçalho</label>
                   <select value={brand} onChange={e => setBrand(e.target.value as 'octo' | 'vinicius' | 'procurada')}
-                    className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800">
+                    className="field-input text-[var(--color-ink)]">
                     <option value="octo">agência OCTO.</option>
                     <option value="vinicius">Vinicius Kolling</option>
                     <option value="procurada">agência Procurada</option>
@@ -2422,48 +2365,48 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
               {/* Discount */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Desconto</label>
+                  <label className="field-label">Tipo de Desconto</label>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setDiscountType('fixed')}
-                      className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${discountType === 'fixed' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-gray-600 border-white/60'}`}>
+                      className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${discountType === 'fixed' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60'}`}>
                       R$ Fixo
                     </button>
                     <button type="button" onClick={() => setDiscountType('percent')}
-                      className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${discountType === 'percent' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-gray-600 border-white/60'}`}>
+                      className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${discountType === 'percent' ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60'}`}>
                       % Percentual
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="field-label">
                     {discountType === 'percent' ? 'Desconto (%)' : 'Desconto (R$)'}
                   </label>
                   {discountType === 'percent' ? (
                     <div className="relative">
                       <input type="number" step="0.01" min="0" max="100" value={discountRaw} onChange={e => setDiscountRaw(e.target.value)}
-                        className="w-full border border-white/60 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">%</span>
+                        className="field-input pr-10" />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--color-ink-3)] pointer-events-none">%</span>
                     </div>
                   ) : (
                     <CurrencyInput value={discountRaw} onChange={setDiscountRaw} />
                   )}
                 </div>
                 <div className="bg-gradient-to-r from-[#C13584]/10 to-[#a42b6f]/10 rounded-xl p-4 border border-[#C13584]/20">
-                  <p className="text-xs text-gray-500 mb-1">Valor Líquido Final</p>
+                  <p className="text-xs text-[var(--color-ink-3)] mb-1">Valor Líquido Final</p>
                   <p className="text-2xl font-bold text-[#C13584]">R$ {fmtBRL(netValue)}</p>
-                  {discountAmt > 0 && <p className="text-xs text-gray-500 mt-1">Desconto: R$ {fmtBRL(discountAmt)}</p>}
+                  {discountAmt > 0 && <p className="text-xs text-[var(--color-ink-3)] mt-1">Desconto: R$ {fmtBRL(discountAmt)}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Valor Especial à Vista (Opcional)</label>
+                  <label className="field-label">Valor Especial à Vista (Opcional)</label>
                   <CurrencyInput
                     value={upfrontPrice}
                     onChange={setUpfrontPrice}
                     className="w-full !border-orange-300 focus:!ring-orange-500 shadow-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Gera um quadro de destaque na proposta impressa.</p>
+                  <p className="text-xs text-[var(--color-ink-3)] mt-1">Gera um quadro de destaque na proposta impressa.</p>
                 </div>
               </div>
 
@@ -2471,9 +2414,9 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
               <div>
                 <div className="flex items-end gap-4 mb-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Número de Parcelas</label>
+                    <label className="field-label">Número de Parcelas</label>
                     <select value={numInstallments} onChange={e => setNumInstallments(parseInt(e.target.value))}
-                      className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-800">
+                      className="field-input text-[var(--color-ink)]">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                         <option key={n} value={n}>{n}x de R$ {fmtBRL(netValue / n)}</option>
                       ))}
@@ -2489,7 +2432,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   <div className="overflow-hidden rounded-xl border border-white/50">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-white/40 border-b border-white/40 text-gray-500 text-xs uppercase tracking-wider">
+                        <tr className="bg-white/40 border-b border-white/40 text-[var(--color-ink-3)] text-xs uppercase tracking-wider">
                           <th className="px-4 py-3 text-left w-12">#</th>
                           <th className="px-4 py-3 text-left">Data de Vencimento</th>
                           <th className="px-4 py-3 text-left">Valor (R$)</th>
@@ -2502,7 +2445,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                             <td className="px-4 py-3 font-bold text-[#C13584]">{i + 1}</td>
                             <td className="px-4 py-2">
                               <input type="date" value={inst.date} onChange={e => handleInstallmentDateChange(i, e.target.value)}
-                                className="border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60 focus:outline-none focus:ring-1 focus:ring-[#C13584]" />
+                                className="field-input" />
                             </td>
                             <td className="px-4 py-2">
                               <CurrencyInput
@@ -2511,7 +2454,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                                 className="!w-36 !rounded-lg"
                               />
                             </td>
-                            <td className="px-4 py-3 text-right text-gray-500">
+                            <td className="px-4 py-3 text-right text-[var(--color-ink-3)]">
                               {netValue > 0 ? ((inst.value / netValue) * 100).toFixed(1) : '0'}%
                             </td>
                           </tr>
@@ -2519,7 +2462,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                       </tbody>
                       <tfoot>
                         <tr className="bg-white/40 border-t border-white/50 font-semibold">
-                          <td colSpan={2} className="px-4 py-3 text-gray-700">Total</td>
+                          <td colSpan={2} className="px-4 py-3 text-[var(--color-ink-2)]">Total</td>
                           <td className="px-4 py-3">
                             <span className={`font-bold ${Math.abs(installments.reduce((a, b) => a + b.value, 0) - netValue) > 0.05
                               ? 'text-red-500' : 'text-green-600'
@@ -2527,7 +2470,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                               R$ {fmtBRL(installments.reduce((a, b) => a + b.value, 0))}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-500">100%</td>
+                          <td className="px-4 py-3 text-right text-[var(--color-ink-3)]">100%</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -2537,33 +2480,33 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
             </div>
 
             <hr className="border-white/50" />
-            <h4 className="font-semibold text-lg text-gray-800">Modelo de Orçamento</h4>
+            <h4 className="font-semibold text-lg text-[var(--color-ink)]">Modelo de Orçamento</h4>
 
             <div className="flex flex-col gap-6 relative z-0">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Visão do Projeto</label>
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                <label className="field-label">Visão do Projeto</label>
+                <div className="glass-card overflow-hidden">
                   <Editor value={visionText} onChange={(e) => setVisionText(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
                 </div>
                 <TemplateVarChips />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Especificações Técnicas (Engine)</label>
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                <label className="field-label">Especificações Técnicas (Engine)</label>
+                <div className="glass-card overflow-hidden">
                   <Editor value={engineText} onChange={(e) => setEngineText(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
                 </div>
                 <TemplateVarChips />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Escopo de Entregas</label>
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                <label className="field-label">Escopo de Entregas</label>
+                <div className="glass-card overflow-hidden">
                   <Editor value={scopeText} onChange={(e) => setScopeText(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
                 </div>
                 <TemplateVarChips />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Definições de Investimento</label>
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                <label className="field-label">Definições de Investimento</label>
+                <div className="glass-card overflow-hidden">
                   <Editor value={investmentText} onChange={(e) => setInvestmentText(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
                 </div>
                 <TemplateVarChips />
@@ -2572,12 +2515,12 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 
             <hr className="border-white/50" />
             <div className="flex justify-between items-center mb-0">
-              <h4 className="font-semibold text-lg text-gray-800">Cronograma e Fases</h4>
+              <h4 className="font-semibold text-lg text-[var(--color-ink)]">Cronograma e Fases</h4>
               <button type="button" onClick={addPhase} className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer">Adicionar Fase</button>
             </div>
 
             <div className="flex flex-col gap-3">
-              {phases.length === 0 ? <p className="text-sm text-gray-500 italic">Sem fases definidas.</p> : phases.map((ph, i) => (
+              {phases.length === 0 ? <p className="text-sm text-[var(--color-ink-3)] italic">Sem fases definidas.</p> : phases.map((ph, i) => (
                 <div
                   key={i}
                   draggable
@@ -2593,13 +2536,13 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                       : 'border-white/40 bg-white/30'
                   }`}
                 >
-                  <div className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0">
+                  <div className="cursor-grab active:cursor-grabbing text-[var(--color-ink-3)] hover:text-[var(--color-ink-2)] flex-shrink-0">
                     <GripVertical size={18} />
                   </div>
                   <input type="text" placeholder="Nome da fase..." value={ph.name} onChange={e => updatePhase(i, 'name', e.target.value)} className="flex-1 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
                   <div className="flex items-center gap-2">
                     <input type="number" placeholder="Dias" value={ph.duration_days} onChange={e => updatePhase(i, 'duration_days', parseInt(e.target.value) || 0)} className="w-20 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
-                    <span className="text-xs text-gray-500">Dias Úteis</span>
+                    <span className="text-xs text-[var(--color-ink-3)]">Dias Úteis</span>
                   </div>
                   <button type="button" onClick={() => removePhase(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 size={16} /></button>
                 </div>
@@ -2611,13 +2554,13 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
             <hr className="border-white/50" />
             <div>
               <div className="flex justify-between items-center mb-1">
-                <h4 className="font-semibold text-lg text-gray-800">Seções Adicionais</h4>
+                <h4 className="font-semibold text-lg text-[var(--color-ink)]">Seções Adicionais</h4>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Aparecem antes do Investimento. Use um modelo reutilizável (atualiza em todas as propostas) ou crie um texto manual só para esta.</p>
+              <p className="text-sm text-[var(--color-ink-3)] mb-4">Aparecem antes do Investimento. Use um modelo reutilizável (atualiza em todas as propostas) ou crie um texto manual só para esta.</p>
 
               <div className="flex flex-col gap-3">
                 {additionalSections.length === 0 && (
-                  <p className="text-sm text-gray-500 italic">Nenhuma seção adicional.</p>
+                  <p className="text-sm text-[var(--color-ink-3)] italic">Nenhuma seção adicional.</p>
                 )}
                 {additionalSections.map((section, i) => {
                   if (section.kind === 'template') {
@@ -2628,19 +2571,19 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                           <div className="flex items-center gap-2 min-w-0">
                             <Link2 size={16} className="text-[#C13584] flex-shrink-0" />
                             <div className="min-w-0">
-                              <p className="font-semibold text-gray-800 truncate">{t ? t.title : 'Modelo removido'}</p>
+                              <p className="font-semibold text-[var(--color-ink)] truncate">{t ? t.title : 'Modelo removido'}</p>
                               <p className="text-xs text-[#C13584]">Vinculado ao modelo — atualiza automaticamente</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <button type="button" onClick={() => detachSection(i)} title="Personalizar nesta proposta (desvincular)" className="flex items-center gap-1 text-xs font-medium text-gray-600 px-3 py-1.5 border border-white/60 rounded-lg bg-white/60 hover:bg-white/80 cursor-pointer">
+                            <button type="button" onClick={() => detachSection(i)} title="Personalizar nesta proposta (desvincular)" className="flex items-center gap-1 text-xs font-medium text-[var(--color-ink-2)] px-3 py-1.5 border border-white/60 rounded-lg bg-white/60 hover:bg-white/80 cursor-pointer">
                               <Unlink size={14} /> Personalizar
                             </button>
                             <button type="button" onClick={() => removeSection(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 size={16} /></button>
                           </div>
                         </div>
                         {t?.content && (
-                          <div className="mt-3 pt-3 border-t border-[#C13584]/10 text-sm text-gray-600 leading-relaxed line-clamp-3" dangerouslySetInnerHTML={{ __html: t.content }} />
+                          <div className="mt-3 pt-3 border-t border-[#C13584]/10 text-sm text-[var(--color-ink-2)] leading-relaxed line-clamp-3" dangerouslySetInnerHTML={{ __html: t.content }} />
                         )}
                       </div>
                     );
@@ -2653,11 +2596,11 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                           placeholder="Título da seção (ex: MATERIAIS A SER FORNECIDOS PELO CLIENTE)"
                           value={section.title}
                           onChange={e => updateCustomSection(i, 'title', e.target.value)}
-                          className="flex-1 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60 focus:outline-none focus:ring-2 focus:ring-[#C13584]"
+                          className="flex-1 field-input"
                         />
                         <button type="button" onClick={() => removeSection(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer flex-shrink-0"><Trash2 size={16} /></button>
                       </div>
-                      <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+                      <div className="glass-card overflow-hidden">
                         <Editor value={section.content} onChange={(e) => updateCustomSection(i, 'content', e.target.value)} containerProps={{ style: { minHeight: '10rem', resize: 'vertical' } }} />
                       </div>
                       <TemplateVarChips />
@@ -2676,7 +2619,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                     <select
                       value={templateToAdd}
                       onChange={e => addTemplateSection(e.target.value)}
-                      className="border border-white/60 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner text-gray-700"
+                      className="field-input"
                     >
                       <option value="">+ Adicionar de um Modelo...</option>
                       {sectionTemplates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
@@ -2701,10 +2644,10 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                 )}
               </div>
               <div className="flex gap-3 items-center">
-                <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">
+                <button type="button" onClick={onCancel} className="btn-secondary">
                   Cancelar
                 </button>
-                <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+                <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
                   {loading && <Loader2 size={16} className="animate-spin" />}
                   {isEditing ? 'Atualizar Proposta' : 'Salvar Proposta'}
                 </button>
@@ -2754,13 +2697,13 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
               )}
               <div className="h-12 w-px bg-gray-300 mx-2"></div>
               <div>
-                <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Proposta de</p>
+                <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase">Proposta de</p>
                 <p className="text-2xl font-black tracking-tight text-[#C13584] uppercase mt-1">{serviceTypeStr || 'Serviço'}</p>
               </div>
-              <div className="ml-auto text-right text-xs text-gray-400">
+              <div className="ml-auto text-right text-xs text-[var(--color-ink-3)]">
                 <p>Emissão: {new Date().toLocaleDateString('pt-BR')}</p>
                 {isEditing && proposalData?.proposal && (
-                  <p className="font-mono font-bold text-gray-600 mt-1">
+                  <p className="font-mono font-bold text-[var(--color-ink-2)] mt-1">
                     #{proposalData.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase()}
                   </p>
                 )}
@@ -2770,15 +2713,15 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
             {/* Client info */}
             {isEditing && proposalData?.proposal && (
               <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Preparado para</p>
-                <p className="text-xl font-bold text-gray-900">{clientDisplayName}</p>
+                <p className="text-xs text-[var(--color-ink-3)] uppercase tracking-wider mb-1">Preparado para</p>
+                <p className="text-xl font-bold text-[var(--color-ink)]">{clientDisplayName}</p>
                 {proposalData.client?.company_name && (
-                  <p className="text-sm text-gray-600">{proposalData.client.name}</p>
+                  <p className="text-sm text-[var(--color-ink-2)]">{proposalData.client.name}</p>
                 )}
               </div>
             )}
 
-            <div className="space-y-10 text-gray-800 text-sm">
+            <div className="space-y-10 text-[var(--color-ink)] text-sm">
 
               {/* 1 - Vision */}
               {visionText && (
@@ -2808,7 +2751,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
               {phases.length > 0 && (
                 <section>
                   <h3 className="text-xl font-bold text-[#C13584] mb-4 pb-2 border-b border-[#C13584]/20">4. Cronograma Estimado</h3>
-                  <p className="mb-4 text-gray-600">
+                  <p className="mb-4 text-[var(--color-ink-2)]">
                     O projeto será executado em <strong>{phases.length} fases</strong>, totalizando <strong>{totalBusinessDays} dias úteis</strong>
                     {startDate ? `, com início previsto para ${new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })} e entrega prevista para ${endDateStr}` : ''}.
                   </p>
@@ -2875,7 +2818,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 
                 {/* Optional investment text */}
                 {investmentText && (
-                  <div className="mb-6 leading-relaxed text-gray-700" dangerouslySetInnerHTML={{
+                  <div className="mb-6 leading-relaxed text-[var(--color-ink-2)]" dangerouslySetInnerHTML={{
                     __html: resolveVars(investmentText, {
                       NOME_CLIENTE: clientName || proposalData?.client?.name || '',
                       EMPRESA_CLIENTE: proposalData?.client?.company_name || '',
@@ -2946,7 +2889,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                 {/* Installments table */}
                 {installments.length > 0 && (
                   <>
-                    <p className="font-semibold text-gray-700 mb-3">Condições de Pagamento — {installments.length}x parcela(s):</p>
+                    <p className="font-semibold text-[var(--color-ink-2)] mb-3">Condições de Pagamento — {installments.length}x parcela(s):</p>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ backgroundColor: '#fdf2f8', borderBottom: '2px solid #C13584' }}>
@@ -2980,7 +2923,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   </>
                 )}
 
-                <p className="mt-10 pt-6 border-t border-gray-200 text-xs text-gray-400">
+                <p className="mt-10 pt-6 border-t border-gray-200 text-xs text-[var(--color-ink-3)]">
                   Este documento é uma proposta comercial com validade de 15 dias a partir da data de emissão.
                   Estamos prontos para iniciar o projeto imediatamente após a sua aprovação.
                 </p>
@@ -3058,34 +3001,34 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-4xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">
           {isEditing ? 'Editar Lançamento' : 'Novo Lançamento'}
         </h3>
-        <p className="text-sm text-gray-600 mt-1">Gerencie suas receitas e despesas.</p>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Gerencie suas receitas e despesas.</p>
       </div>
 
       <div className="p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label className="field-label">Tipo</label>
               <select
                 value={type}
                 onChange={e => handleTypeChange(e.target.value as CashFlowType)}
-                className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                className="field-input"
               >
                 <option value="Income">Receita (+)</option>
                 <option value="Expense">Despesa (-)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+              <label className="field-label">Categoria</label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-                className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                className="field-input"
               >
                 {filteredCategories.length === 0 ? (
                   <option value="">Nenhuma categoria cadastrada</option>
@@ -3098,56 +3041,56 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+            <label className="field-label">Descrição</label>
             <input
               required
               type="text"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+              className="field-input"
               placeholder="Ex: Mensalidade Cliente X"
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Valor (R$)</label>
+              <label className="field-label">Valor (R$)</label>
               <input
                 required
                 type="number"
                 step="0.01"
                 value={value}
                 onChange={e => setValue(e.target.value)}
-                className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                className="field-input"
                 placeholder="Ex: 1500.00"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="field-label">Status</label>
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value as CashFlowStatus)}
-                className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                className="field-input"
               >
                 <option value="Paid">Pago</option>
                 <option value="Pending">Pendente</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
+              <label className="field-label">Data</label>
               <input
                 required
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner"
+                className="field-input"
               />
             </div>
           </div>
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">
+            <button type="button" onClick={onCancel} className="btn-secondary">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />}
               {isEditing ? 'Atualizar Lançamento' : 'Salvar Lançamento'}
             </button>
@@ -3197,13 +3140,13 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
-        <h3 className="font-semibold text-lg text-gray-800">Serviços Base</h3>
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
+        <h3 className="font-semibold text-lg text-[var(--color-ink)]">Serviços Base</h3>
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Nome</th>
             <th className="p-4 font-medium">Preço Base</th>
             <th className="p-4 font-medium">Cronograma Padrão</th>
@@ -3213,21 +3156,21 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
         <tbody className="text-sm">
           {services.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-8 text-center text-gray-500">
+              <td colSpan={4} className="p-8 text-center text-[var(--color-ink-3)]">
                 Nenhum serviço base cadastrado ainda.
                 <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro serviço.</button>
               </td>
             </tr>
           ) : (
             services.map(s => (
-              <tr key={s.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
-                <td className="p-4 pl-6 text-gray-800 font-medium whitespace-nowrap">{s.name}</td>
-                <td className="p-4 font-semibold text-gray-700">R$ {Number(s.base_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td className="p-4 text-gray-600">
+              <tr key={s.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
+                <td className="p-4 pl-6 text-[var(--color-ink)] font-medium whitespace-nowrap">{s.name}</td>
+                <td className="p-4 font-semibold text-[var(--color-ink-2)]">R$ {Number(s.base_price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-[var(--color-ink-2)]">
                   {s.phases_template ? `${(s.phases_template as any).length} Fases` : '-'}
                 </td>
                 <td className="p-4 pr-6 text-right">
-                  <div className="flex items-center justify-end gap-3 text-gray-400">
+                  <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                     <button onClick={() => onEditService(s)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                       <Edit2 size={16} />
                     </button>
@@ -3305,56 +3248,56 @@ function ServiceFormView({ serviceData, onSave, onCancel }: { serviceData: Servi
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-4xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">
           {isEditing ? 'Editar Serviço Base' : 'Novo Serviço Base'}
         </h3>
-        <p className="text-sm text-gray-600 mt-1">Configure o modelo padrão para as propostas deste tipo de serviço.</p>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Configure o modelo padrão para as propostas deste tipo de serviço.</p>
       </div>
 
       <div className="p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Serviço</label>
-              <input required type="text" value={name} onChange={e => setName(e.target.value)} className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" placeholder="Ex: Criação de Site" />
+              <label className="field-label">Nome do Serviço</label>
+              <input required type="text" value={name} onChange={e => setName(e.target.value)} className="field-input" placeholder="Ex: Criação de Site" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Preço Base (R$)</label>
+              <label className="field-label">Preço Base (R$)</label>
               <CurrencyInput required value={basePrice} onChange={setBasePrice} />
             </div>
           </div>
 
           <hr className="border-white/50" />
-          <h4 className="font-semibold text-lg text-gray-800">Modelos de Textos</h4>
+          <h4 className="font-semibold text-lg text-[var(--color-ink)]">Modelos de Textos</h4>
 
           <div className="flex flex-col gap-6 relative z-0">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Visão do Projeto</label>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+              <label className="field-label">Visão do Projeto</label>
+              <div className="glass-card overflow-hidden">
                 <Editor value={visionTemplate} onChange={(e) => setVisionTemplate(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
               </div>
               <TemplateVarChips />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Especificações Técnicas (Engine)</label>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+              <label className="field-label">Especificações Técnicas (Engine)</label>
+              <div className="glass-card overflow-hidden">
                 <Editor value={engineTemplate} onChange={(e) => setEngineTemplate(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
               </div>
               <TemplateVarChips />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Escopo de Entregas</label>
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+              <label className="field-label">Escopo de Entregas</label>
+              <div className="glass-card overflow-hidden">
                 <Editor value={scopeTemplate} onChange={(e) => setScopeTemplate(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
               </div>
               <TemplateVarChips />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Definições de Investimento</label>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+            <label className="field-label">Definições de Investimento</label>
+            <div className="glass-card overflow-hidden">
               <Editor value={investmentTemplate} onChange={(e) => setInvestmentTemplate(e.target.value)} containerProps={{ style: { minHeight: '16rem', resize: 'vertical' } }} />
             </div>
             <TemplateVarChips />
@@ -3362,17 +3305,17 @@ function ServiceFormView({ serviceData, onSave, onCancel }: { serviceData: Servi
 
           <hr className="border-white/50" />
           <div className="flex justify-between items-center mb-0">
-            <h4 className="font-semibold text-lg text-gray-800">Cronograma Padrão</h4>
+            <h4 className="font-semibold text-lg text-[var(--color-ink)]">Cronograma Padrão</h4>
             <button type="button" onClick={addPhase} className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer">Adicionar Fase Padrão</button>
           </div>
 
           <div className="flex flex-col gap-3">
-            {phasesTemplate.length === 0 ? <p className="text-sm text-gray-500 italic">Sem fases padrão definidas.</p> : phasesTemplate.map((ph, i) => (
+            {phasesTemplate.length === 0 ? <p className="text-sm text-[var(--color-ink-3)] italic">Sem fases padrão definidas.</p> : phasesTemplate.map((ph, i) => (
               <div key={i} className="flex gap-4 items-center bg-white/30 p-3 rounded-xl border border-white/40">
                 <input type="text" placeholder="Nome da fase..." value={ph.name} onChange={e => updatePhase(i, 'name', e.target.value)} className="flex-1 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
                 <div className="flex items-center gap-2">
                   <input type="number" placeholder="Dias" value={ph.duration_days} onChange={e => updatePhase(i, 'duration_days', parseInt(e.target.value) || 0)} className="w-20 border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60" />
-                  <span className="text-xs text-gray-500">Dias Úteis</span>
+                  <span className="text-xs text-[var(--color-ink-3)]">Dias Úteis</span>
                 </div>
                 <button type="button" onClick={() => removePhase(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"><Trash2 size={16} /></button>
               </div>
@@ -3380,8 +3323,8 @@ function ServiceFormView({ serviceData, onSave, onCancel }: { serviceData: Servi
           </div>
 
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Serviço' : 'Salvar Serviço'}
             </button>
           </div>
@@ -3439,14 +3382,14 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
-        <h3 className="font-semibold text-lg text-gray-800">Modelos de Seção</h3>
-        <p className="text-sm text-gray-500">Editar um modelo atualiza todas as propostas vinculadas.</p>
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
+        <h3 className="font-semibold text-lg text-[var(--color-ink)]">Modelos de Seção</h3>
+        <p className="text-sm text-[var(--color-ink-3)]">Editar um modelo atualiza todas as propostas vinculadas.</p>
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Título</th>
             <th className="p-4 font-medium">Prévia</th>
             <th className="p-4 font-medium">Em uso</th>
@@ -3456,7 +3399,7 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
         <tbody className="text-sm">
           {sectionTemplates.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-8 text-center text-gray-500">
+              <td colSpan={4} className="p-8 text-center text-[var(--color-ink-3)]">
                 Nenhum modelo de seção cadastrado ainda.
                 <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro modelo.</button>
               </td>
@@ -3465,18 +3408,18 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
             sectionTemplates.map(t => {
               const uses = usageCount(t.id);
               return (
-                <tr key={t.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
-                  <td className="p-4 pl-6 text-gray-800 font-medium align-top whitespace-nowrap">{t.title}</td>
-                  <td className="p-4 text-gray-500 align-top">
+                <tr key={t.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
+                  <td className="p-4 pl-6 text-[var(--color-ink)] font-medium align-top whitespace-nowrap">{t.title}</td>
+                  <td className="p-4 text-[var(--color-ink-3)] align-top">
                     <div className="line-clamp-2 max-w-md" dangerouslySetInnerHTML={{ __html: t.content || '<span class="italic">Sem conteúdo</span>' }} />
                   </td>
                   <td className="p-4 align-top">
                     {uses > 0
-                      ? <span className="px-2.5 py-1 bg-pink-100/80 text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">{uses} proposta(s)</span>
+                      ? <span className="badge badge-brand">{uses} proposta(s)</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="p-4 pr-6 text-right align-top">
-                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                       <button onClick={() => onEditTemplate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
                         <Edit2 size={16} />
                       </button>
@@ -3539,12 +3482,12 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-4xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">
           {isEditing ? 'Editar Modelo de Seção' : 'Novo Modelo de Seção'}
         </h3>
-        <p className="text-sm text-gray-600 mt-1">Conteúdo reutilizável (ex: Garantia e Suporte). Ao salvar, atualiza em todas as propostas vinculadas.</p>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Conteúdo reutilizável (ex: Garantia e Suporte). Ao salvar, atualiza em todas as propostas vinculadas.</p>
       </div>
 
       <div className="p-8">
@@ -3556,20 +3499,20 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
         )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Título da Seção</label>
-            <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner" placeholder="Ex: GARANTIA E SUPORTE" />
+            <label className="field-label">Título da Seção</label>
+            <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="field-input" placeholder="Ex: GARANTIA E SUPORTE" />
           </div>
           <div className="relative z-0">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+            <label className="field-label">Conteúdo</label>
+            <div className="glass-card overflow-hidden">
               <Editor value={content} onChange={(e) => setContent(e.target.value)} containerProps={{ style: { minHeight: '20rem', resize: 'vertical' } }} />
             </div>
             <TemplateVarChips />
           </div>
 
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}
             </button>
           </div>
@@ -3628,16 +3571,16 @@ function ContractPrintDocument({ contract, agencySettings }: { contract: Contrac
         </h1>
         <div className="h-12 w-px bg-gray-300 mx-2"></div>
         <div>
-          <p className="text-xs font-bold tracking-widest text-gray-500 uppercase">Contrato</p>
+          <p className="text-xs font-bold tracking-widest text-[var(--color-ink-3)] uppercase">Contrato</p>
           <p className="text-lg font-black tracking-tight text-[#C13584] mt-1">{contract.title}</p>
         </div>
-        <div className="ml-auto text-right text-xs text-gray-400">
+        <div className="ml-auto text-right text-xs text-[var(--color-ink-3)]">
           <p>Emissão: {new Date(contract.created_at).toLocaleDateString('pt-BR')}</p>
-          <p className="font-mono font-bold text-gray-600 mt-1">#{propId}</p>
+          <p className="font-mono font-bold text-[var(--color-ink-2)] mt-1">#{propId}</p>
         </div>
       </div>
 
-      <div className="text-sm text-gray-800 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: body }} />
+      <div className="text-sm text-[var(--color-ink)] leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: body }} />
 
       {/* Signature block */}
       <div style={{ marginTop: '48px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
@@ -3682,7 +3625,7 @@ function ContractPrintDocument({ contract, agencySettings }: { contract: Contrac
             </p>
           </>
         ) : (
-          <p className="text-sm text-gray-400 italic">Contrato ainda não assinado.</p>
+          <p className="text-sm text-[var(--color-ink-3)] italic">Contrato ainda não assinado.</p>
         )}
       </div>
     </div>
@@ -3732,10 +3675,10 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
 
   const statusBadge = (c: Contract) => {
     const expired = c.status === 'pending' && c.valid_until && new Date(c.valid_until + 'T23:59:59Z') < new Date();
-    if (c.status === 'signed') return <span className="px-2.5 py-1 bg-green-100/80 text-green-700 rounded-lg text-xs font-semibold whitespace-nowrap">Assinado</span>;
-    if (c.status === 'cancelled') return <span className="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-lg text-xs font-semibold whitespace-nowrap">Cancelado</span>;
-    if (expired) return <span className="px-2.5 py-1 bg-red-100/80 text-red-700 rounded-lg text-xs font-semibold whitespace-nowrap">Link expirado</span>;
-    return <span className="px-2.5 py-1 bg-amber-100/80 text-amber-700 rounded-lg text-xs font-semibold whitespace-nowrap">Aguardando assinatura</span>;
+    if (c.status === 'signed') return <span className="badge badge-success">Assinado</span>;
+    if (c.status === 'cancelled') return <span className="badge badge-neutral">Cancelado</span>;
+    if (expired) return <span className="badge badge-danger">Link expirado</span>;
+    return <span className="badge badge-warning">Aguardando assinatura</span>;
   };
 
   const proposalNumberFor = (c: Contract) => {
@@ -3745,19 +3688,19 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex flex-wrap justify-between items-center gap-3 bg-white/20 backdrop-blur-md">
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex flex-wrap justify-between items-center gap-3">
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por número, cliente ou título..."
-          className="pl-4 pr-4 py-2 border border-white/60 bg-white/40 backdrop-blur-sm rounded-xl text-sm w-80 focus:outline-none focus:ring-2 focus:ring-[#C13584] focus:bg-white/80 transition-all shadow-inner"
+          className="field-input w-80"
         />
         <div className="flex gap-1 bg-white/40 p-1 rounded-xl border border-white/60">
           {(['all', 'pending', 'signed'] as const).map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${statusFilter === s ? 'bg-[#C13584] text-white' : 'text-gray-600 hover:bg-white/60'}`}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${statusFilter === s ? 'bg-[#C13584] text-white' : 'text-[var(--color-ink-2)] hover:bg-white/60'}`}>
               {s === 'all' ? 'Todos' : s === 'pending' ? 'Aguardando' : 'Assinados'}
             </button>
           ))}
@@ -3765,7 +3708,7 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium w-24">Nº</th>
             <th className="p-4 font-medium">Cliente / Contrato</th>
             <th className="p-4 font-medium">Status</th>
@@ -3776,7 +3719,7 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
         <tbody className="text-sm">
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={5} className="p-8 text-center text-gray-500">
+              <td colSpan={5} className="p-8 text-center text-[var(--color-ink-3)]">
                 {search || statusFilter !== 'all' ? 'Nenhum contrato encontrado.' : 'Nenhum contrato gerado ainda. Gere um a partir de uma proposta.'}
               </td>
             </tr>
@@ -3784,31 +3727,31 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
             filtered.map(c => {
               const propNum = proposalNumberFor(c);
               return (
-                <tr key={c.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+                <tr key={c.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
                   <td className="p-4 pl-6">
                     <span className="inline-block font-mono font-bold text-xs text-[#C13584] bg-pink-50 border border-pink-100 px-2 py-1 rounded-lg tracking-widest">
                       #{contractNumber(c.id)}
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="font-bold text-gray-900">{c.signer_name || '—'}</div>
-                    <div className="text-sm text-gray-500 font-normal mt-0.5">{c.title}</div>
-                    <div className="text-xs text-gray-400 font-normal mt-0.5">
+                    <div className="font-bold text-[var(--color-ink)]">{c.signer_name || '—'}</div>
+                    <div className="text-sm text-[var(--color-ink-3)] font-normal mt-0.5">{c.title}</div>
+                    <div className="text-xs text-[var(--color-ink-3)] font-normal mt-0.5">
                       {new Date(c.created_at).toLocaleDateString('pt-BR')}
                       {propNum && <> · Proposta #{propNum}</>}
                     </div>
                   </td>
                   <td className="p-4">{statusBadge(c)}</td>
-                  <td className="p-4 text-gray-600">
+                  <td className="p-4 text-[var(--color-ink-2)]">
                     {c.status === 'signed' && c.signed_at ? (
                       <div className="text-xs">
-                        <div className="font-medium text-gray-700">{fmtContractDateTime(c.signed_at)}</div>
-                        <div className="text-gray-400">IP: {c.signer_ip || '—'}</div>
+                        <div className="font-medium text-[var(--color-ink-2)]">{fmtContractDateTime(c.signed_at)}</div>
+                        <div className="text-[var(--color-ink-3)]">IP: {c.signer_ip || '—'}</div>
                       </div>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                       {c.status !== 'signed' && (
                         <>
                           <button onClick={() => copyLink(c.public_token, c.id)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Copiar link público">
@@ -3925,31 +3868,31 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
     }
   };
 
-  const fieldClass = 'w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner';
+  const fieldClass = 'field-input';
 
   // Success state — show the public link
   if (created) {
     const link = publicSignUrl(created.token);
     return (
-      <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-2xl mx-auto">
+      <div className="glass-panel overflow-hidden max-w-2xl mx-auto">
         <div className="p-8 text-center">
           <div className="w-14 h-14 rounded-full bg-green-50 text-green-500 flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={28} />
           </div>
-          <h3 className="font-semibold text-xl text-gray-800">Contrato gerado!</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-6">Envie o link abaixo para o cliente preencher os dados e assinar.</p>
+          <h3 className="font-semibold text-xl text-[var(--color-ink)]">Contrato gerado!</h3>
+          <p className="text-sm text-[var(--color-ink-2)] mt-1 mb-6">Envie o link abaixo para o cliente preencher os dados e assinar.</p>
           <div className="flex items-center gap-2 bg-white/70 border border-white/60 rounded-xl p-2 pl-4">
-            <span className="flex-1 text-sm text-gray-700 truncate text-left">{link}</span>
+            <span className="flex-1 text-sm text-[var(--color-ink-2)] truncate text-left">{link}</span>
             <button onClick={() => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
               className="px-4 py-2 bg-[#C13584] text-white rounded-lg text-sm font-medium hover:bg-[#A42D70] cursor-pointer flex items-center gap-2 whitespace-nowrap">
               <Copy size={16} /> {copied ? 'Copiado!' : 'Copiar'}
             </button>
           </div>
           <div className="mt-6 flex justify-center gap-3">
-            <a href={link} target="_blank" rel="noreferrer" className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 cursor-pointer flex items-center gap-2">
+            <a href={link} target="_blank" rel="noreferrer" className="btn-secondary">
               <ExternalLink size={16} /> Abrir página
             </a>
-            <button onClick={onSave} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 cursor-pointer">
+            <button onClick={onSave} className="px-6 py-3 btn-primary">
               Ir para Contratos
             </button>
           </div>
@@ -3959,19 +3902,19 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
   }
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-3xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-3xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">Gerar Contrato</h3>
-        <p className="text-sm text-gray-600 mt-1">Crie um contrato a partir de uma proposta e gere o link público de assinatura.</p>
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">Gerar Contrato</h3>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Crie um contrato a partir de uma proposta e gere o link público de assinatura.</p>
       </div>
 
       <div className="p-8">
         <form onSubmit={handleGenerate} className="flex flex-col gap-6">
           {/* Proposal selector (when not pre-selected) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Proposta de origem</label>
+            <label className="field-label">Proposta de origem</label>
             {proposalData ? (
-              <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-gray-800">
+              <div className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm bg-white/40 text-[var(--color-ink)]">
                 <span className="font-semibold">{picked?.client?.name || 'Cliente'}</span> — {picked?.proposal.service_type} (#{picked?.proposal.id.replace(/-/g, '').substring(0, 6).toUpperCase()})
               </div>
             ) : (
@@ -3993,9 +3936,9 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Modelo de Contrato</label>
+            <label className="field-label">Modelo de Contrato</label>
             {contractTemplates.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Nenhum modelo de contrato cadastrado. Crie um em "Modelos de Contrato" primeiro.</p>
+              <p className="text-sm text-[var(--color-ink-3)] italic">Nenhum modelo de contrato cadastrado. Crie um em "Modelos de Contrato" primeiro.</p>
             ) : (
               <select required value={templateId} onChange={e => setTemplateId(e.target.value)} className={fieldClass}>
                 <option value="">Selecione um modelo...</option>
@@ -4006,22 +3949,22 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Contratante</label>
+              <label className="field-label">Nome do Contratante</label>
               <input type="text" value={signerName} onChange={e => setSignerName(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+              <label className="field-label">E-mail</label>
               <input type="email" value={signerEmail} onChange={e => setSignerEmail(e.target.value)} className={fieldClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Link válido até</label>
+              <label className="field-label">Link válido até</label>
               <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} className={fieldClass} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cabeçalho</label>
+              <label className="field-label">Cabeçalho</label>
               <select value={brand} onChange={e => setBrand(e.target.value)} className={fieldClass}>
                 <option value="octo">agência OCTO.</option>
                 <option value="vinicius">Vinicius Kolling</option>
@@ -4029,7 +3972,7 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
+              <label className="field-label">Forma de Pagamento</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'avista' | 'parcelado')} className={fieldClass}>
                 <option value="avista">À vista (valor líquido, prazo 7 dias)</option>
                 <option value="parcelado">Parcelado (valor bruto + nº de parcelas)</option>
@@ -4038,12 +3981,12 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
           </div>
 
           {picked && (
-            <div className="p-3 rounded-xl bg-white/30 border border-white/50 text-sm text-gray-600">
-              <span className="font-medium text-gray-700">Condição que entrará no contrato: </span>
+            <div className="p-3 rounded-xl bg-white/30 border border-white/50 text-sm text-[var(--color-ink-2)]">
+              <span className="font-medium text-[var(--color-ink-2)]">Condição que entrará no contrato: </span>
               {condicaoSentence}
               {paymentMethod === 'parcelado' && (
                 parcelasHtml
-                  ? <span className="text-gray-500"> + tabela com {proposalInstallments?.length} parcela(s).</span>
+                  ? <span className="text-[var(--color-ink-3)]"> + tabela com {proposalInstallments?.length} parcela(s).</span>
                   : <span className="text-amber-600"> (Atenção: esta proposta não tem parcelas geradas — a tabela ficará vazia.)</span>
               )}
             </div>
@@ -4051,7 +3994,7 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
 
           {signerFields.length > 0 && (
             <div className="p-4 rounded-xl bg-white/30 border border-white/50">
-              <p className="text-sm font-medium text-gray-700 mb-2">O cliente preencherá:</p>
+              <p className="text-sm font-medium text-[var(--color-ink-2)] mb-2">O cliente preencherá:</p>
               <div className="flex flex-wrap gap-2">
                 {signerFields.map(f => (
                   <span key={f.key} className="px-2.5 py-1 text-xs rounded-lg bg-[#C13584]/10 text-[#C13584] border border-[#C13584]/20">
@@ -4071,15 +4014,15 @@ function ContractFormView({ proposalData, proposals, contractTemplates, agencySe
 
           {template && (
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Prévia do contrato</p>
-              <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 max-h-72 overflow-y-auto text-sm text-gray-700 leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: previewBody }} />
-              <p className="text-xs text-gray-400 mt-2">Os campos do cliente (ex.: CPF) aparecerão preenchidos após a assinatura.</p>
+              <p className="text-sm font-medium text-[var(--color-ink-2)] mb-2">Prévia do contrato</p>
+              <div className="bg-gray-50 rounded-xl border border-gray-100 p-5 max-h-72 overflow-y-auto text-sm text-[var(--color-ink-2)] leading-relaxed contract-body" dangerouslySetInnerHTML={{ __html: previewBody }} />
+              <p className="text-xs text-[var(--color-ink-3)] mt-2">Os campos do cliente (ex.: CPF) aparecerão preenchidos após a assinatura.</p>
             </div>
           )}
 
           <div className="mt-2 flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />} Gerar Contrato e Link
             </button>
           </div>
@@ -4131,18 +4074,18 @@ function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewM
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="text-sm text-gray-500 hover:text-[#C13584] cursor-pointer flex items-center gap-1">
+          <button onClick={onBack} className="text-sm text-[var(--color-ink-3)] hover:text-[#C13584] cursor-pointer flex items-center gap-1">
             <ChevronLeft size={16} /> Contratos
           </button>
-          <h3 className="font-semibold text-lg text-gray-800">Modelos de Contrato</h3>
+          <h3 className="font-semibold text-lg text-[var(--color-ink)]">Modelos de Contrato</h3>
         </div>
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Título</th>
             <th className="p-4 font-medium">Campos do cliente</th>
             <th className="p-4 font-medium">Em uso</th>
@@ -4152,7 +4095,7 @@ function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewM
         <tbody className="text-sm">
           {contractTemplates.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-8 text-center text-gray-500">
+              <td colSpan={4} className="p-8 text-center text-[var(--color-ink-3)]">
                 Nenhum modelo de contrato ainda.
                 <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro modelo.</button>
               </td>
@@ -4162,20 +4105,20 @@ function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewM
               const fields = (t.signer_fields as SignerField[]) || [];
               const uses = usageCount(t.id);
               return (
-                <tr key={t.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
-                  <td className="p-4 pl-6 text-gray-800 font-medium align-top">{t.title}</td>
-                  <td className="p-4 align-top text-gray-500">
+                <tr key={t.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
+                  <td className="p-4 pl-6 text-[var(--color-ink)] font-medium align-top">{t.title}</td>
+                  <td className="p-4 align-top text-[var(--color-ink-3)]">
                     {fields.length === 0 ? <span className="text-gray-300">—</span> : (
                       <div className="flex flex-wrap gap-1 max-w-md">
-                        {fields.map(f => <span key={f.key} className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-gray-600">{f.label}</span>)}
+                        {fields.map(f => <span key={f.key} className="px-2 py-0.5 text-xs rounded-md bg-gray-100 text-[var(--color-ink-2)]">{f.label}</span>)}
                       </div>
                     )}
                   </td>
                   <td className="p-4 align-top">
-                    {uses > 0 ? <span className="px-2.5 py-1 bg-pink-100/80 text-[#C13584] rounded-lg text-xs font-semibold whitespace-nowrap">{uses} contrato(s)</span> : <span className="text-gray-300">—</span>}
+                    {uses > 0 ? <span className="badge badge-brand">{uses} contrato(s)</span> : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="p-4 pr-6 text-right align-top">
-                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                       <button onClick={() => onEditTemplate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar"><Edit2 size={16} /></button>
                       <button disabled={isDuplicating === t.id} onClick={() => handleDuplicate(t)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Duplicar">
                         {isDuplicating === t.id ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
@@ -4257,7 +4200,7 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
     }
   };
 
-  const fieldClass = 'w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner';
+  const fieldClass = 'field-input';
 
   // Available variables = proposal vars + agency vars + signer field keys
   const allVars = [
@@ -4267,10 +4210,10 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
   ];
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-4xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">{isEditing ? 'Editar Modelo de Contrato' : 'Novo Modelo de Contrato'}</h3>
-        <p className="text-sm text-gray-600 mt-1">Use variáveis no texto; os campos do cliente são preenchidos na assinatura. Contratos já gerados guardam o texto da época.</p>
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">{isEditing ? 'Editar Modelo de Contrato' : 'Novo Modelo de Contrato'}</h3>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Use variáveis no texto; os campos do cliente são preenchidos na assinatura. Contratos já gerados guardam o texto da época.</p>
       </div>
 
       <div className="p-8">
@@ -4282,7 +4225,7 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
         )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Título do Contrato</label>
+            <label className="field-label">Título do Contrato</label>
             <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className={fieldClass} placeholder="Ex: Contrato de Prestação de Serviços" />
           </div>
 
@@ -4290,13 +4233,13 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
           <div className="p-4 rounded-2xl bg-white/30 border border-white/50">
             <div className="flex justify-between items-center mb-3">
               <div>
-                <h4 className="font-semibold text-gray-800">Campos preenchidos pelo cliente</h4>
-                <p className="text-xs text-gray-500">Cada campo vira uma variável (a "chave") que você pode usar no texto, ex.: <span className="font-mono">{'{{CPF}}'}</span></p>
+                <h4 className="font-semibold text-[var(--color-ink)]">Campos preenchidos pelo cliente</h4>
+                <p className="text-xs text-[var(--color-ink-3)]">Cada campo vira uma variável (a "chave") que você pode usar no texto, ex.: <span className="font-mono">{'{{CPF}}'}</span></p>
               </div>
               <button type="button" onClick={addField} className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer whitespace-nowrap">+ Campo</button>
             </div>
             <div className="flex flex-col gap-2">
-              {fields.length === 0 && <p className="text-sm text-gray-500 italic">Nenhum campo. O cliente apenas assinará.</p>}
+              {fields.length === 0 && <p className="text-sm text-[var(--color-ink-3)] italic">Nenhum campo. O cliente apenas assinará.</p>}
               {fields.map((f, i) => (
                 <div key={i} className="flex flex-wrap gap-2 items-center bg-white/40 p-2 rounded-xl border border-white/50">
                   <input type="text" placeholder="Rótulo (ex: CPF)" value={f.label}
@@ -4309,7 +4252,7 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
                     className="border border-white/60 rounded-lg px-3 py-2 text-sm bg-white/60">
                     {SIGNER_FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
-                  <label className="flex items-center gap-1.5 text-sm text-gray-600 px-2 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-sm text-[var(--color-ink-2)] px-2 cursor-pointer">
                     <input type="checkbox" checked={f.required} onChange={e => updateField(i, { required: e.target.checked })} className="accent-[#C13584]" />
                     Obrigatório
                   </label>
@@ -4320,19 +4263,19 @@ function ContractTemplateFormView({ templateData, contracts, onSave, onCancel }:
           </div>
 
           <div className="relative z-0">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Texto do Contrato</label>
-            <div className="bg-white/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/60">
+            <label className="field-label">Texto do Contrato</label>
+            <div className="glass-card overflow-hidden">
               <Editor value={body} onChange={(e) => setBody(e.target.value)} containerProps={{ style: { minHeight: '24rem', resize: 'vertical' } }} />
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
-              <span className="text-xs text-gray-400 self-center mr-1">Variáveis disponíveis:</span>
+              <span className="text-xs text-[var(--color-ink-3)] self-center mr-1">Variáveis disponíveis:</span>
               {allVars.map(k => <span key={k} className="px-2 py-0.5 text-xs rounded-md bg-[#C13584]/10 text-[#C13584] border border-[#C13584]/20 font-mono">{`{{${k}}}`}</span>)}
             </div>
           </div>
 
           <div className="mt-2 flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md">
+            <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}
             </button>
           </div>
@@ -4372,50 +4315,50 @@ function LoginView() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100">
-      <div className="absolute top-[-20%] left-[-10%] w-[40rem] h-[40rem] rounded-full bg-gradient-to-br from-pink-400/30 to-purple-400/30 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50rem] h-[50rem] rounded-full bg-gradient-to-tr from-blue-300/30 to-pink-300/30 blur-[140px] pointer-events-none" />
+    <div className="min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden bg-[#f6f4f8]">
+      <div className="absolute top-[-15%] left-[-10%] w-[40rem] h-[40rem] rounded-full bg-gradient-to-br from-[#C13584]/14 to-violet-400/12 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-[-15%] right-[-10%] w-[46rem] h-[46rem] rounded-full bg-gradient-to-tr from-indigo-300/12 to-[#C13584]/10 blur-[150px] pointer-events-none" />
 
-      <div className="bg-white/50 backdrop-blur-2xl p-8 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] border border-white/80 w-full max-w-md flex flex-col items-center z-10 relative">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C13584] to-purple-600 shadow-lg flex items-center justify-center mb-6 border border-white/40">
-          <span className="text-white font-bold text-3xl">O</span>
+      <div className="glass-panel p-8 sm:p-10 w-full max-w-md flex flex-col items-center z-10 relative mx-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C13584] to-violet-600 shadow-[0_8px_20px_-4px_rgba(193,53,132,0.5)] flex items-center justify-center mb-6">
+          <span className="text-white font-bold text-3xl leading-none">O</span>
         </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">OctaOS CRM</h2>
-        <p className="text-sm text-gray-600 mb-8 font-medium">Faça login para gerenciar sua agência.</p>
+        <h2 className="text-2xl font-bold text-[var(--color-ink)] mb-1.5">OctaOS <span className="font-normal text-[var(--color-ink-3)]">CRM</span></h2>
+        <p className="text-sm text-[var(--color-ink-3)] mb-8">Faça login para gerenciar sua agência.</p>
 
         {error && (
-          <div className="w-full p-3 mb-6 bg-red-500/10 backdrop-blur-md text-red-600 text-sm rounded-xl border border-red-500/20 text-center">
+          <div className="w-full p-3.5 mb-6 bg-rose-50 text-rose-700 text-sm rounded-xl border border-rose-200 text-center" role="alert">
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+            <label className="field-label">E-mail</label>
             <input
               required
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm text-gray-800 shadow-inner"
+              className="field-input"
               placeholder="admin@octaos.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+            <label className="field-label">Senha</label>
             <input
               required
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm text-gray-800 shadow-inner"
+              className="field-input"
               placeholder="••••••••"
             />
           </div>
           <button
             type="submit"
             disabled={loggingIn}
-            className="w-full mt-4 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white py-3 rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md border border-[#C13584]/20"
+            className="btn-primary w-full mt-3 py-3"
           >
             {loggingIn ? <Loader2 size={18} className="animate-spin text-white" /> : 'Entrar no Sistema'}
           </button>
@@ -4433,7 +4376,7 @@ function ClientsView({ clients, refetch, onEditClient }: { clients: Client[], re
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const funnelLabel: Record<string, { label: string; color: string }> = {
-    lead: { label: 'Lead', color: 'bg-gray-100 text-gray-600' },
+    lead: { label: 'Lead', color: 'bg-gray-100 text-[var(--color-ink-2)]' },
     qualified: { label: 'Qualificado', color: 'bg-blue-100 text-blue-700' },
     proposal: { label: 'Proposta', color: 'bg-yellow-100 text-yellow-700' },
     negotiation: { label: 'Negociação', color: 'bg-orange-100 text-orange-700' },
@@ -4459,20 +4402,20 @@ function ClientsView({ clients, refetch, onEditClient }: { clients: Client[], re
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-2xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden">
-      <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/20 backdrop-blur-md">
+    <div className="glass-panel overflow-hidden">
+      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por nome, empresa, e-mail ou CNPJ..."
-          className="pl-4 pr-4 py-2 border border-white/60 bg-white/40 backdrop-blur-sm rounded-xl text-sm w-96 focus:outline-none focus:ring-2 focus:ring-[#C13584] focus:bg-white/80 transition-all shadow-inner"
+          className="field-input w-96"
         />
-        <span className="text-sm text-gray-500 font-medium">{filtered.length} cliente(s)</span>
+        <span className="text-sm text-[var(--color-ink-3)] font-medium">{filtered.length} cliente(s)</span>
       </div>
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-white/30 backdrop-blur-md border-b border-white/40 text-sm text-gray-500">
+          <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Nome / Empresa</th>
             <th className="p-4 font-medium">Contato</th>
             <th className="p-4 font-medium">CNPJ</th>
@@ -4482,26 +4425,26 @@ function ClientsView({ clients, refetch, onEditClient }: { clients: Client[], re
         </thead>
         <tbody className="text-sm">
           {filtered.length === 0 ? (
-            <tr><td colSpan={5} className="p-8 text-center text-gray-500">{search ? `Nenhum cliente encontrado para "${search}".` : 'Nenhum cliente cadastrado ainda.'}</td></tr>
+            <tr><td colSpan={5} className="p-8 text-center text-[var(--color-ink-3)]">{search ? `Nenhum cliente encontrado para "${search}".` : 'Nenhum cliente cadastrado ainda.'}</td></tr>
           ) : (
             filtered.map(c => {
               const stage = funnelLabel[c.funnel_stage || 'lead'];
               return (
-                <tr key={c.id} className="border-b border-white/30 hover:bg-white/40 transition-colors">
+                <tr key={c.id} className="border-b border-white/45 hover:bg-white/55 transition-colors">
                   <td className="p-4 pl-6">
-                    <p className="font-semibold text-gray-800">{c.name}</p>
-                    {c.company_name && <p className="text-xs text-gray-500 mt-0.5">{c.company_name}</p>}
+                    <p className="font-semibold text-[var(--color-ink)]">{c.name}</p>
+                    {c.company_name && <p className="text-xs text-[var(--color-ink-3)] mt-0.5">{c.company_name}</p>}
                   </td>
                   <td className="p-4">
-                    {c.email && <p className="text-gray-600">{c.email}</p>}
-                    {c.phone && <p className="text-xs text-gray-500 mt-0.5">{c.phone}</p>}
+                    {c.email && <p className="text-[var(--color-ink-2)]">{c.email}</p>}
+                    {c.phone && <p className="text-xs text-[var(--color-ink-3)] mt-0.5">{c.phone}</p>}
                   </td>
-                  <td className="p-4 text-gray-500 font-mono text-xs">{c.cnpj || '—'}</td>
+                  <td className="p-4 text-[var(--color-ink-3)] font-mono text-xs">{c.cnpj || '—'}</td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${stage.color}`}>{stage.label}</span>
                   </td>
                   <td className="p-4 pr-6 text-right">
-                    <div className="flex items-center justify-end gap-3 text-gray-400">
+                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
                       <button onClick={() => onEditClient(c)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar"><Edit2 size={16} /></button>
                       <button disabled={isDeleting === c.id} onClick={() => handleDelete(c.id, c.name)} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
                         {isDeleting === c.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -4540,7 +4483,7 @@ function ClientFormView({ clientData, onSave, onCancel }: { clientData: Client |
   const [nextFollowUp, setNextFollowUp] = useState(clientData?.next_follow_up || '');
   const [notes, setNotes] = useState(clientData?.notes || '');
 
-  const fieldClass = "w-full border border-white/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C13584] bg-white/60 backdrop-blur-sm shadow-inner";
+  const fieldClass = "field-input";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -4572,43 +4515,43 @@ function ClientFormView({ clientData, onSave, onCancel }: { clientData: Client |
   };
 
   return (
-    <div className="bg-white/50 backdrop-blur-lg rounded-3xl border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden max-w-4xl mx-auto">
+    <div className="glass-panel overflow-hidden max-w-4xl mx-auto">
       <div className="p-8 border-b border-white/40 bg-white/30 backdrop-blur-md">
-        <h3 className="font-semibold text-xl text-gray-800">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-        <p className="text-sm text-gray-600 mt-1">Dados de contato e posição no funil de vendas.</p>
+        <h3 className="font-semibold text-xl text-[var(--color-ink)]">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+        <p className="text-sm text-[var(--color-ink-2)] mt-1">Dados de contato e posição no funil de vendas.</p>
       </div>
       <div className="p-8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
 
           <div>
-            <h4 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wider">Identificação</h4>
+            <h4 className="font-semibold text-[var(--color-ink-2)] mb-4 text-sm uppercase tracking-wider">Identificação</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome do Contato *</label><input required value={name} onChange={e => setName(e.target.value)} className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Empresa / Razão Social</label><input value={companyName} onChange={e => setCompanyName(e.target.value)} className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">CNPJ</label><input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Segmento / Nicho</label><input value={segment} onChange={e => setSegment(e.target.value)} placeholder="Ex: E-commerce, Restaurante..." className={fieldClass} /></div>
+              <div><label className="field-label">Nome do Contato *</label><input required value={name} onChange={e => setName(e.target.value)} className={fieldClass} /></div>
+              <div><label className="field-label">Empresa / Razão Social</label><input value={companyName} onChange={e => setCompanyName(e.target.value)} className={fieldClass} /></div>
+              <div><label className="field-label">CNPJ</label><input value={cnpj} onChange={e => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" className={fieldClass} /></div>
+              <div><label className="field-label">Segmento / Nicho</label><input value={segment} onChange={e => setSegment(e.target.value)} placeholder="Ex: E-commerce, Restaurante..." className={fieldClass} /></div>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wider">Contato</h4>
+            <h4 className="font-semibold text-[var(--color-ink-2)] mb-4 text-sm uppercase tracking-wider">Contato</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Telefone / WhatsApp</label><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 90000-0000" className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Website</label><input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://..." className={fieldClass} /></div>
+              <div><label className="field-label">E-mail</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} className={fieldClass} /></div>
+              <div><label className="field-label">Telefone / WhatsApp</label><input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 90000-0000" className={fieldClass} /></div>
+              <div><label className="field-label">Website</label><input type="url" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://..." className={fieldClass} /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label><input value={city} onChange={e => setCity(e.target.value)} className={fieldClass} /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Estado</label><input value={state} onChange={e => setState(e.target.value)} maxLength={2} placeholder="SP" className={fieldClass} /></div>
+                <div><label className="field-label">Cidade</label><input value={city} onChange={e => setCity(e.target.value)} className={fieldClass} /></div>
+                <div><label className="field-label">Estado</label><input value={state} onChange={e => setState(e.target.value)} maxLength={2} placeholder="SP" className={fieldClass} /></div>
               </div>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-700 mb-4 text-sm uppercase tracking-wider">Funil de Vendas</h4>
+            <h4 className="font-semibold text-[var(--color-ink-2)] mb-4 text-sm uppercase tracking-wider">Funil de Vendas</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Estágio no Funil</label>
-                <select value={funnelStage} onChange={e => setFunnelStage(e.target.value)} className={fieldClass + ' text-gray-800'}>
+                <label className="field-label">Estágio no Funil</label>
+                <select value={funnelStage} onChange={e => setFunnelStage(e.target.value)} className={fieldClass + ' text-[var(--color-ink)]'}>
                   <option value="lead">Lead (Contato Inicial)</option>
                   <option value="qualified">Qualificado</option>
                   <option value="proposal">Proposta Enviada</option>
@@ -4618,8 +4561,8 @@ function ClientFormView({ clientData, onSave, onCancel }: { clientData: Client |
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Origem do Lead</label>
-                <select value={leadSource} onChange={e => setLeadSource(e.target.value)} className={fieldClass + ' text-gray-800'}>
+                <label className="field-label">Origem do Lead</label>
+                <select value={leadSource} onChange={e => setLeadSource(e.target.value)} className={fieldClass + ' text-[var(--color-ink)]'}>
                   <option value="">Selecione...</option>
                   <option value="Instagram">Instagram</option>
                   <option value="Indicação">Indicação</option>
@@ -4631,19 +4574,19 @@ function ClientFormView({ clientData, onSave, onCancel }: { clientData: Client |
                   <option value="Outro">Outro</option>
                 </select>
               </div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Valor Estimado do Contrato (R$)</label><input type="number" step="0.01" value={estimatedValue} onChange={e => setEstimatedValue(e.target.value)} className={fieldClass} /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Próximo Follow-up</label><input type="date" value={nextFollowUp} onChange={e => setNextFollowUp(e.target.value)} className={fieldClass} /></div>
+              <div><label className="field-label">Valor Estimado do Contrato (R$)</label><input type="number" step="0.01" value={estimatedValue} onChange={e => setEstimatedValue(e.target.value)} className={fieldClass} /></div>
+              <div><label className="field-label">Próximo Follow-up</label><input type="date" value={nextFollowUp} onChange={e => setNextFollowUp(e.target.value)} className={fieldClass} /></div>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observações Internas</label>
+            <label className="field-label">Observações Internas</label>
             <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Contexto, histórico, decisores..." className={fieldClass + ' resize-y'} />
           </div>
 
           <div className="flex justify-end gap-3 pt-6 border-t border-white/40">
-            <button type="button" onClick={onCancel} className="px-6 py-3 border border-white/60 bg-white/40 text-gray-700 rounded-xl text-sm font-medium hover:bg-white/60 transition-colors shadow-sm cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 bg-gradient-to-r from-[#C13584] to-[#a42b6f] text-white rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 cursor-pointer shadow-md">
+            <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />}
               {isEditing ? 'Atualizar Cliente' : 'Salvar Cliente'}
             </button>
