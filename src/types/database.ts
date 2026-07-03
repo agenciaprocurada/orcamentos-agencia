@@ -170,6 +170,23 @@ export type Task = {
   priority: string;
 };
 
+// --- Leads (CRM) — inbound do formulário do site ---
+
+export type LeadStatus = 'novo' | 'respondido' | 'proposta' | 'concluido';
+
+export type Lead = {
+  id: string;
+  name: string;
+  phone: string | null;
+  services: string[] | null;
+  message: string | null;
+  source: string | null;
+  status: LeadStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -222,6 +239,11 @@ export interface Database {
         Row: Task;
         Insert: { id?: string; created_at?: string; title: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
         Update: { id?: string; created_at?: string; title?: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
+      };
+      leads: {
+        Row: Lead;
+        Insert: { id?: string; name: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
+        Update: { id?: string; name?: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
       };
     };
   };

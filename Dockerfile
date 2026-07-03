@@ -15,10 +15,14 @@ COPY . .
 # Injeção das variáveis de ambiente para o build do React/Vite
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
+# Chave PÚBLICA VAPID (Web Push). É pública por natureza (vai no bundle), então
+# tem um default embutido — funciona sem precisar configurar build arg no painel.
+ARG VITE_VAPID_PUBLIC_KEY=BNn0nDbN3JJLjOoWCcKxKV9qxRDChacs-OWt4aJFBEuFhzjKD6u5zel9f8eZIN4JDN0jH9s2HZgP7PadxSo5A-M
 
 # Torná-las disponíveis durante o processo de build do 'npm run build'
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_VAPID_PUBLIC_KEY=$VITE_VAPID_PUBLIC_KEY
 
 # Realiza o build (resultado vai para a pasta /dist)
 RUN npm run build

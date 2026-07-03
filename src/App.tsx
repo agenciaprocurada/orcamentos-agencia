@@ -29,13 +29,15 @@ import {
   FileSignature,
   Download,
   ScrollText,
-  ExternalLink
+  ExternalLink,
+  Inbox
 } from 'lucide-react';
 import './App.css';
 import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
 import { TasksView } from './components/TasksView';
+import { LeadsView } from './components/LeadsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
@@ -43,7 +45,7 @@ import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlow
 import type { User } from '@supabase/supabase-js';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSectionTemplate, setSelectedSectionTemplate] = useState<SectionTemplate | null>(null);
@@ -73,7 +75,21 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch, silentRefetch } = useSupabase();
+  // Abre direto na aba de Leads quando o app é iniciado a partir de uma
+  // notificação push (URL ?tab=leads) ou quando o service worker avisa que a
+  // notificação foi clicada numa aba já aberta.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'leads') setActiveTab('leads');
+
+    const onSwMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'navigate' && e.data.tab === 'leads') setActiveTab('leads');
+    };
+    navigator.serviceWorker?.addEventListener('message', onSwMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
+  }, []);
+
+  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch, silentRefetch } = useSupabase();
 
   useEffect(() => {
     if (user?.id) {
@@ -121,6 +137,7 @@ function App() {
           <nav className="flex flex-col gap-5 flex-1 overflow-y-auto -mr-2 pr-2">
             <div className="flex flex-col gap-1">
               <NavButton icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+              <NavButton icon={<Inbox size={18} />} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
               <NavButton icon={<FileText size={18} />} label="Propostas" active={activeTab === 'proposals'} onClick={() => setActiveTab('proposals')} />
               <NavButton icon={<ListTodo size={18} />} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
               <NavButton icon={<DollarSign size={18} />} label="Fluxo de Caixa" active={['cashflow', 'cashflow-categories', 'cashflow-all', 'cashflow-form'].includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
@@ -173,6 +190,7 @@ function App() {
           <header className="h-[68px] flex-shrink-0 border-b glass-raised flex items-center justify-between px-8 sticky top-0 z-[20] print:hidden">
             <h2 className="text-xl font-bold tracking-tight text-[var(--color-ink)]">
               {activeTab === 'dashboard' ? 'Visão Geral' :
+                activeTab === 'leads' ? 'CRM — Recepção de Leads' :
                 activeTab === 'tasks' ? 'Tarefas' :
                   activeTab === 'proposals' ? 'Gestão de Propostas' :
                     activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
@@ -257,6 +275,7 @@ function App() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
                 {activeTab === 'dashboard' && <DashboardView proposals={proposals} cashFlows={cashFlows} />}
                 {activeTab === 'tasks' && <TasksView tasks={tasks} refetch={refetch} />}
+                {activeTab === 'leads' && <LeadsView leads={leads} refetch={silentRefetch} />}
                 {activeTab === 'proposals' && (
                   <ProposalsView
                     proposals={proposals}
