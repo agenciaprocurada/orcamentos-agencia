@@ -1,25 +1,46 @@
 // Service worker do PWA da Procurada.
 //
 // Responsabilidades:
-//  1. Instalabilidade (ativa na hora, assume controle das abas abertas).
+//  1. Instalabilidade: manifest + este SW com um handler de `fetch` real
+//     (responde à navegação) fazem o Chrome oferecer a instalação.
 //  2. Receber Web Push e mostrar a notificação (evento `push`).
-//  3. Ao clicar na notificação, focar a aba já aberta ou abrir uma nova,
-//     navegando para a aba de Leads.
+//  3. Ao clicar na notificação, focar a aba aberta ou abrir uma nova na aba Leads.
 //
-// Sem cache de assets de propósito: o app é online-first (Supabase) e o Vite
-// versiona os arquivos com hash. Um cache mal feito serviria versões velhas.
+// Cache: apenas o "shell" ('/') para funcionar como app instalável. Os assets
+// com hash (JS/CSS) e os dados (Supabase) NÃO são cacheados — vêm sempre da
+// rede, então nunca serve versão velha.
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
+const SHELL = 'procurada-shell-v2';
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((c) => c.add('/'))
+      .catch(() => {})
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(keys.filter((k) => k !== SHELL).map((k) => caches.delete(k))),
+      )
+      .then(() => self.clients.claim()),
+  );
 });
 
-// Handler de fetch mínimo (passthrough). Presente só para satisfazer o
-// critério de instalabilidade de alguns navegadores; não faz cache.
-self.addEventListener('fetch', () => {});
+// Só intercepta navegação: rede primeiro, cai no shell em cache se offline.
+// Demais requisições (assets, API) passam direto sem cache.
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.mode === 'navigate') {
+    event.respondWith(fetch(req).catch(() => caches.match('/')));
+  }
+});
 
 self.addEventListener('push', (event) => {
   let data = {};

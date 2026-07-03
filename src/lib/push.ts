@@ -81,6 +81,20 @@ export async function enablePush(): Promise<{ ok: boolean; reason?: string }> {
   );
 
   if (error) return { ok: false, reason: error.message };
+
+  // Notificação local de confirmação: dá feedback imediato e, na prática, testa
+  // se as notificações realmente aparecem neste aparelho (permissão/SO ok).
+  try {
+    await reg.showNotification('Avisos ativados ✅', {
+      body: 'Você será avisado aqui quando entrar um novo lead.',
+      icon: '/pwa-192.png',
+      badge: '/pwa-192.png',
+      tag: 'welcome',
+    });
+  } catch {
+    // showNotification pode falhar em alguns navegadores; não é crítico.
+  }
+
   return { ok: true };
 }
 
