@@ -11,6 +11,7 @@ import {
   X,
   StickyNote,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 // Colunas do funil (ordem = fluxo do lead da esquerda para a direita).
@@ -50,8 +51,27 @@ export function LeadsView({ leads, refetch }: { leads: Lead[]; refetch: () => vo
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<LeadStatus | null>(null);
   const [detail, setDetail] = useState<Lead | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => { setItems(leads); }, [leads]);
+
+  // Atualiza SÓ os leads (sem recarregar as outras tabelas do sistema).
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      const prevIds = new Set(items.map(l => l.id));
+      const novos = (data as Lead[]).filter(l => !prevIds.has(l.id)).length;
+      setItems(data as Lead[]);
+      setFlash(novos > 0 ? `+${novos} novo${novos > 1 ? 's' : ''}` : 'Tudo em dia');
+      setTimeout(() => setFlash(null), 2500);
+    }
+    setRefreshing(false);
+  };
 
   const moveLead = async (id: string, status: LeadStatus) => {
     const current = items.find(l => l.id === id);
@@ -92,6 +112,18 @@ export function LeadsView({ leads, refetch }: { leads: Lead[]; refetch: () => vo
           <span className="text-xs text-[var(--color-ink-3)] italic hidden lg:block">
             Arraste os cartões entre as colunas para mudar o status
           </span>
+          {flash && (
+            <span className="badge badge-success animate-in fade-in duration-200">{flash}</span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="btn-secondary !py-2 !px-3"
+            title="Buscar novos leads"
+          >
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+            Atualizar
+          </button>
           <PushToggle />
         </div>
       </div>
