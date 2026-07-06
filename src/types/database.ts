@@ -41,10 +41,12 @@ export type ProposalPhase = {
 };
 
 // Reusable additional section model (e.g. "GARANTIA E SUPORTE").
+// service_ids: empty/null = available for every service.
 export type SectionTemplate = {
   id: string;
   title: string;
   content: string | null;
+  service_ids: string[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -207,8 +209,8 @@ export interface Database {
       };
       proposal_section_templates: {
         Row: SectionTemplate;
-        Insert: { id?: string; title: string; content?: string | null; created_at?: string; updated_at?: string; };
-        Update: { id?: string; title?: string; content?: string | null; created_at?: string; updated_at?: string; };
+        Insert: { id?: string; title: string; content?: string | null; service_ids?: string[] | null; created_at?: string; updated_at?: string; };
+        Update: { id?: string; title?: string; content?: string | null; service_ids?: string[] | null; created_at?: string; updated_at?: string; };
       };
       contract_templates: {
         Row: ContractTemplate;

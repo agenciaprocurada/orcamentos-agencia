@@ -339,6 +339,7 @@ function App() {
                   <SectionTemplatesView
                     sectionTemplates={sectionTemplates}
                     proposals={proposals}
+                    services={services}
                     refetch={refetch}
                     openNewModal={() => { setSelectedSectionTemplate(null); setActiveTab('section-template-form'); }}
                     onEditTemplate={(t) => { setSelectedSectionTemplate(t); setActiveTab('section-template-form'); }}
@@ -348,6 +349,7 @@ function App() {
                   <SectionTemplateFormView
                     templateData={selectedSectionTemplate}
                     proposals={proposals}
+                    services={services}
                     onSave={() => { setActiveTab('section-templates'); refetch(); }}
                     onCancel={() => setActiveTab('section-templates')}
                   />
@@ -2019,6 +2021,24 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
     setAdditionalSections([...additionalSections, { kind: 'template', template_id: templateId }]);
     setTemplateToAdd('');
   };
+  // Templates allowed for the selected service. Templates with no services
+  // marked are available everywhere; with a service selected, only its
+  // templates (plus the unrestricted ones) are offered.
+  const allowedTemplates = sectionTemplates.filter(t =>
+    !t.service_ids || t.service_ids.length === 0 || (serviceId !== '' && t.service_ids.includes(serviceId))
+  );
+  // Allowed templates not yet attached to this proposal (drives the dropdown and the bulk-add button)
+  const remainingTemplates = allowedTemplates.filter(t =>
+    !additionalSections.some(s => s.kind === 'template' && s.template_id === t.id)
+  );
+  const hiddenTemplatesCount = sectionTemplates.length - allowedTemplates.length;
+  const addAllTemplateSections = () => {
+    if (remainingTemplates.length === 0) return;
+    setAdditionalSections([
+      ...additionalSections,
+      ...remainingTemplates.map(t => ({ kind: 'template' as const, template_id: t.id })),
+    ]);
+  };
   const removeSection = (index: number) => setAdditionalSections(additionalSections.filter((_, i) => i !== index));
   const updateCustomSection = (index: number, field: 'title' | 'content', val: string) => {
     setAdditionalSections(additionalSections.map((s, i) => (i === index && s.kind === 'custom') ? { ...s, [field]: val } : s));
@@ -2633,7 +2653,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                   className="text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 cursor-pointer">
                   + Adicionar Seção Manual
                 </button>
-                {sectionTemplates.length > 0 && (
+                {remainingTemplates.length > 0 && (
                   <div className="flex items-center gap-2">
                     <select
                       value={templateToAdd}
@@ -2641,11 +2661,30 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
                       className="field-input"
                     >
                       <option value="">+ Adicionar de um Modelo...</option>
-                      {sectionTemplates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                      {remainingTemplates.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
                     </select>
                   </div>
                 )}
+                {allowedTemplates.length > 0 && (
+                  remainingTemplates.length > 0 ? (
+                    <button type="button" onClick={addAllTemplateSections}
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#C13584] px-4 py-2 border border-[#C13584]/20 rounded-xl bg-white/40 hover:bg-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/50">
+                      <Layers size={15} /> Incluir Todos os Modelos ({remainingTemplates.length})
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-3)] px-4 py-2 border border-white/60 rounded-xl bg-white/30 select-none">
+                      <CheckCircle size={15} /> Todos os modelos incluídos
+                    </span>
+                  )
+                )}
               </div>
+              {hiddenTemplatesCount > 0 && (
+                <p className="text-xs text-[var(--color-ink-2)] mt-2.5">
+                  {hiddenTemplatesCount === 1
+                    ? '1 modelo de seção pertence a outros serviços e não é exibido aqui.'
+                    : `${hiddenTemplatesCount} modelos de seção pertencem a outros serviços e não são exibidos aqui.`}
+                </p>
+              )}
             </div>
 
             <div className="mt-4 flex justify-between items-center gap-3 pt-6 border-t border-white/40">
@@ -3356,9 +3395,10 @@ function ServiceFormView({ serviceData, onSave, onCancel }: { serviceData: Servi
 // -------------------------------------------------------------
 // SECTION TEMPLATES VIEW (reusable additional sections, e.g. GARANTIA E SUPORTE)
 // -------------------------------------------------------------
-function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewModal, onEditTemplate }: {
+function SectionTemplatesView({ sectionTemplates, proposals, services, refetch, openNewModal, onEditTemplate }: {
   sectionTemplates: SectionTemplate[];
   proposals: { proposal: Proposal; client: Client | null }[];
+  services: Service[];
   refetch: () => void;
   openNewModal: () => void;
   onEditTemplate: (t: SectionTemplate) => void;
@@ -3389,6 +3429,7 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
       const { error } = await supabase.from('proposal_section_templates').insert({
         title: `${t.title} (cópia)`,
         content: t.content,
+        service_ids: t.service_ids || [],
       });
       if (error) throw error;
       refetch();
@@ -3411,6 +3452,7 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Título</th>
             <th className="p-4 font-medium">Prévia</th>
+            <th className="p-4 font-medium">Serviços</th>
             <th className="p-4 font-medium">Em uso</th>
             <th className="p-4 pr-6 font-medium text-right">Ação</th>
           </tr>
@@ -3418,7 +3460,7 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
         <tbody className="text-sm">
           {sectionTemplates.length === 0 ? (
             <tr>
-              <td colSpan={4} className="p-8 text-center text-[var(--color-ink-3)]">
+              <td colSpan={5} className="p-8 text-center text-[var(--color-ink-3)]">
                 Nenhum modelo de seção cadastrado ainda.
                 <button onClick={openNewModal} className="ml-2 text-[#C13584] hover:underline cursor-pointer">Crie o seu primeiro modelo.</button>
               </td>
@@ -3431,6 +3473,24 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
                   <td className="p-4 pl-6 text-[var(--color-ink)] font-medium align-top whitespace-nowrap">{t.title}</td>
                   <td className="p-4 text-[var(--color-ink-3)] align-top">
                     <div className="line-clamp-2 max-w-md" dangerouslySetInnerHTML={{ __html: t.content || '<span class="italic">Sem conteúdo</span>' }} />
+                  </td>
+                  <td className="p-4 align-top">
+                    {(() => {
+                      const linked = (t.service_ids || [])
+                        .map(id => services.find(x => x.id === id))
+                        .filter((s): s is Service => !!s);
+                      if (!t.service_ids || t.service_ids.length === 0) {
+                        return <span className="badge badge-neutral">Todos os serviços</span>;
+                      }
+                      if (linked.length === 0) {
+                        return <span className="text-xs text-[var(--color-ink-3)]" title="Os serviços vinculados foram removidos">—</span>;
+                      }
+                      return (
+                        <div className="flex flex-wrap gap-1 max-w-[14rem]">
+                          {linked.map(s => <span key={s.id} className="badge badge-brand">{s.name}</span>)}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 align-top">
                     {uses > 0
@@ -3463,9 +3523,10 @@ function SectionTemplatesView({ sectionTemplates, proposals, refetch, openNewMod
 // -------------------------------------------------------------
 // SECTION TEMPLATE FORM VIEW
 // -------------------------------------------------------------
-function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: {
+function SectionTemplateFormView({ templateData, proposals, services, onSave, onCancel }: {
   templateData: SectionTemplate | null;
   proposals: { proposal: Proposal; client: Client | null }[];
+  services: Service[];
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -3473,6 +3534,13 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
   const isEditing = !!templateData;
   const [title, setTitle] = useState(templateData?.title || '');
   const [content, setContent] = useState(templateData?.content || '');
+  // Empty service_ids in the DB means "available for every service"
+  const [restrictServices, setRestrictServices] = useState((templateData?.service_ids?.length ?? 0) > 0);
+  const [serviceIds, setServiceIds] = useState<string[]>(templateData?.service_ids || []);
+
+  const toggleService = (id: string) => {
+    setServiceIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
   const usageCount = isEditing
     ? proposals.filter(p => (p.proposal.additional_sections || []).some(s => s.kind === 'template' && s.template_id === templateData!.id)).length
@@ -3480,15 +3548,17 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (restrictServices && serviceIds.length === 0) return; // inline hint already explains
+    const finalServiceIds = restrictServices ? serviceIds : [];
     setLoading(true);
     try {
       if (isEditing && templateData) {
         const { error } = await supabase.from('proposal_section_templates')
-          .update({ title, content, updated_at: new Date().toISOString() })
+          .update({ title, content, service_ids: finalServiceIds, updated_at: new Date().toISOString() })
           .eq('id', templateData.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('proposal_section_templates').insert({ title, content });
+        const { error } = await supabase.from('proposal_section_templates').insert({ title, content, service_ids: finalServiceIds });
         if (error) throw error;
       }
       onSave();
@@ -3521,6 +3591,56 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
             <label className="field-label">Título da Seção</label>
             <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="field-input" placeholder="Ex: GARANTIA E SUPORTE" />
           </div>
+          <div>
+            <label className="field-label">Onde este modelo pode ser usado</label>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setRestrictServices(false)}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${!restrictServices ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60'}`}>
+                Todos os Serviços
+              </button>
+              <button type="button" onClick={() => setRestrictServices(true)}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-colors cursor-pointer ${restrictServices ? 'bg-[#C13584] text-white border-[#C13584]' : 'bg-white/40 text-[var(--color-ink-2)] border-white/60'}`}>
+                Serviços Específicos
+              </button>
+            </div>
+            {!restrictServices && (
+              <p className="text-xs text-[var(--color-ink-2)] mt-2">O modelo ficará disponível em qualquer proposta, seja qual for o serviço.</p>
+            )}
+            {restrictServices && (
+              <div className="glass-inset p-3 mt-3">
+                {services.length === 0 ? (
+                  <p className="text-sm text-[var(--color-ink-2)]">Nenhum serviço cadastrado ainda. Cadastre serviços primeiro ou use "Todos os Serviços".</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {services.map(s => {
+                        const checked = serviceIds.includes(s.id);
+                        return (
+                          <label key={s.id}
+                            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer select-none transition-colors duration-200 ${checked
+                              ? 'bg-[var(--color-primary-50)] border-[var(--color-primary-200)]'
+                              : 'bg-white/60 border-white/70 hover:bg-white/90'}`}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleService(s.id)}
+                              className="w-4 h-4 accent-[#C13584] cursor-pointer flex-shrink-0"
+                            />
+                            <span className={`text-sm font-medium ${checked ? 'text-[var(--color-primary-700)]' : 'text-[var(--color-ink-2)]'}`}>{s.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <p className={`mt-3 text-xs ${serviceIds.length === 0 ? 'text-amber-700' : 'text-[var(--color-ink-2)]'}`}>
+                      {serviceIds.length === 0
+                        ? 'Marque ao menos um serviço para salvar — ou volte para "Todos os Serviços".'
+                        : <>Disponível apenas para <strong className="text-[var(--color-ink)]">{serviceIds.length} de {services.length} serviço{services.length > 1 ? 's' : ''}</strong>.</>}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
           <div className="relative z-0">
             <label className="field-label">Conteúdo</label>
             <div className="glass-card overflow-hidden">
@@ -3531,7 +3651,7 @@ function SectionTemplateFormView({ templateData, proposals, onSave, onCancel }: 
 
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
             <button type="button" onClick={onCancel} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-6 py-3 btn-primary">
+            <button type="submit" disabled={loading || (restrictServices && serviceIds.length === 0)} className="px-6 py-3 btn-primary">
               {loading && <Loader2 size={16} className="animate-spin" />} {isEditing ? 'Atualizar Modelo' : 'Salvar Modelo'}
             </button>
           </div>
