@@ -31,7 +31,9 @@ import {
   ScrollText,
   ExternalLink,
   Barcode,
-  Inbox
+  Inbox,
+  Menu,
+  X
 } from 'lucide-react';
 import './App.css';
 import { useSupabase, clearDataCache } from './hooks/useSupabase';
@@ -58,6 +60,10 @@ function App() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [approvalTarget, setApprovalTarget] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [printProposal, setPrintProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
+
+  // Gaveta de navegação no mobile. Fecha sozinha ao trocar de aba.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => { setSidebarOpen(false); }, [activeTab]);
 
   // Auth State — hydrated synchronously from the stored session so a refresh
   // renders the admin immediately; getSession/onAuthStateChange then confirm
@@ -134,13 +140,28 @@ function App() {
 
       {/* Content wrapper */}
       <div className="flex w-full h-full relative z-10 print:hidden">
-        {/* Sidebar — refined glass, grouped navigation */}
-        <aside className="w-64 bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 py-6 flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden">
+        {/* Backdrop da gaveta — só no mobile, quando aberta */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-[45] bg-black/30 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        {/* Sidebar — refined glass, grouped navigation. Gaveta off-canvas no mobile, fixa no desktop (lg+). */}
+        <aside className={`fixed lg:static inset-y-0 left-0 z-[50] w-64 max-w-[82vw] bg-white/85 lg:bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 py-6 flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden transition-transform duration-300 ease-out lg:transition-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C13584] to-violet-600 shadow-[0_4px_12px_-2px_rgba(193,53,132,0.5)] flex items-center justify-center">
               <span className="text-white font-bold text-lg leading-none">O</span>
             </div>
             <h1 className="text-lg font-bold tracking-tight text-[var(--color-ink)]">OctaOS <span className="font-normal text-[var(--color-ink-3)]">CRM</span></h1>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden ml-auto icon-action"
+              aria-label="Fechar menu"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           <nav className="flex flex-col gap-5 flex-1 overflow-y-auto -mr-2 pr-2">
@@ -196,8 +217,16 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto flex flex-col h-full print:overflow-visible">
-          <header className="h-[68px] flex-shrink-0 border-b glass-raised flex items-center justify-between px-8 sticky top-0 z-[20] print:hidden">
-            <h2 className="text-xl font-bold tracking-tight text-[var(--color-ink)]">
+          <header className="h-[68px] flex-shrink-0 border-b glass-raised flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-[20] print:hidden">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden icon-action flex-shrink-0"
+                aria-label="Abrir menu"
+              >
+                <Menu size={22} />
+              </button>
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--color-ink)] truncate">
               {activeTab === 'dashboard' ? 'Visão Geral' :
                 activeTab === 'leads' ? 'CRM — Recepção de Leads' :
                 activeTab === 'tasks' ? 'Tarefas' :
@@ -218,8 +247,9 @@ function App() {
                                               activeTab === 'contract-templates' ? 'Modelos de Contrato' :
                                                 activeTab === 'contract-template-form' ? (selectedContractTemplate ? 'Editar Modelo de Contrato' : 'Novo Modelo de Contrato') :
                                                   activeTab === 'settings' ? 'Configurações' : ''}
-            </h2>
-            <div className="flex items-center gap-4">
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               {activeTab === 'proposals' && (
                 <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="btn-primary">
                   <Plus size={18} />
@@ -275,7 +305,7 @@ function App() {
             </div>
           </header>
 
-          <div className="p-8 pb-12 flex-1 relative z-0 print:p-0">
+          <div className="p-4 sm:p-6 lg:p-8 pb-12 flex-1 relative z-0 print:p-0">
             {loading ? (
               <div className="w-full h-full flex items-center justify-center text-[#C13584] drop-shadow-lg">
                 <Loader2 className="animate-spin" size={48} />
@@ -1542,14 +1572,14 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
 
   return (
     <div className="glass-panel overflow-hidden">
-      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
-        <div className="relative">
+      <div className="p-5 border-b border-white/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="relative w-full sm:w-auto">
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por número, cliente ou serviço..."
-            className="field-input w-80 pr-10"
+            className="field-input w-full sm:w-80 pr-10"
           />
         </div>
         <button className="btn-secondary">
@@ -1557,7 +1587,7 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
           Filtrar
         </button>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium w-24">Nº</th>
@@ -1645,6 +1675,7 @@ function ProposalsView({ proposals, refetch, onEditProposal, onApproveProposal, 
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -2122,7 +2153,7 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
 
       {/* Table */}
       <div className="glass-panel overflow-hidden">
-        <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
           <thead>
             <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
               <th className="p-4 pl-6 font-medium">Data</th>
@@ -2204,6 +2235,7 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -3436,7 +3468,7 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
       <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
         <h3 className="font-semibold text-lg text-[var(--color-ink)]">Serviços Base</h3>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Nome</th>
@@ -3479,6 +3511,7 @@ function ServicesView({ services, refetch, openNewModal, onEditService }: { serv
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -3677,11 +3710,11 @@ function SectionTemplatesView({ sectionTemplates, proposals, services, refetch, 
 
   return (
     <div className="glass-panel overflow-hidden">
-      <div className="p-5 border-b border-white/50 flex justify-between items-center gap-3">
+      <div className="p-5 border-b border-white/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-3">
         <h3 className="font-semibold text-lg text-[var(--color-ink)]">Modelos de Seção</h3>
         <p className="text-sm text-[var(--color-ink-3)]">Editar um modelo atualiza todas as propostas vinculadas.</p>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Título</th>
@@ -3750,6 +3783,7 @@ function SectionTemplatesView({ sectionTemplates, proposals, services, refetch, 
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -4068,7 +4102,7 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por número, cliente ou título..."
-          className="field-input w-80"
+          className="field-input w-full sm:w-80"
         />
         <div className="flex gap-1 bg-white/40 p-1 rounded-xl border border-white/60">
           {(['all', 'pending', 'signed'] as const).map(s => (
@@ -4079,7 +4113,7 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
           ))}
         </div>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium w-24">Nº</th>
@@ -4149,6 +4183,7 @@ function ContractsView({ contracts, proposals, refetch, onDownloadPdf }: {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -4456,7 +4491,7 @@ function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewM
           <h3 className="font-semibold text-lg text-[var(--color-ink)]">Modelos de Contrato</h3>
         </div>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Título</th>
@@ -4507,6 +4542,7 @@ function ContractTemplatesView({ contractTemplates, contracts, refetch, openNewM
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -4782,11 +4818,11 @@ function ClientsView({ clients, refetch, onEditClient }: { clients: Client[], re
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por nome, empresa, e-mail ou CNPJ..."
-          className="field-input w-96"
+          className="field-input w-full sm:w-96"
         />
         <span className="text-sm text-[var(--color-ink-3)] font-medium">{filtered.length} cliente(s)</span>
       </div>
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
         <thead>
           <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
             <th className="p-4 pl-6 font-medium">Nome / Empresa</th>
@@ -4830,6 +4866,7 @@ function ClientsView({ clients, refetch, onEditClient }: { clients: Client[], re
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
