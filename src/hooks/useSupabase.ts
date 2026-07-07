@@ -1,89 +1,100 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate, Contract, ContractTemplate, AgencySettings, Lead } from '../types/database';
 
+// Snapshot of the last successful load, so a refresh paints data instantly
+// (stale-while-revalidate) instead of holding the whole UI on a spinner.
+const CACHE_KEY = 'procurada-data-cache-v1';
+
+type DataSnapshot = {
+    proposals: { proposal: Proposal; client: Client | null }[];
+    cashFlows: CashFlow[];
+    clients: Client[];
+    services: Service[];
+    cashFlowCategories: CashFlowCategoryRecord[];
+    tasks: Task[];
+    leads: Lead[];
+    sectionTemplates: SectionTemplate[];
+    contracts: Contract[];
+    contractTemplates: ContractTemplate[];
+    agencySettings: AgencySettings | null;
+};
+
+function readCache(): DataSnapshot | null {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        return raw ? (JSON.parse(raw) as DataSnapshot) : null;
+    } catch {
+        return null;
+    }
+}
+
+// Called on sign-out so the next user never sees someone else's snapshot.
+export function clearDataCache() {
+    try { localStorage.removeItem(CACHE_KEY); } catch { /* noop */ }
+}
+
 export function useSupabase() {
-    const [proposals, setProposals] = useState<{ proposal: Proposal; client: Client | null }[]>([]);
-    const [cashFlows, setCashFlows] = useState<CashFlow[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [services, setServices] = useState<Service[]>([]);
-    const [cashFlowCategories, setCashFlowCategories] = useState<CashFlowCategoryRecord[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [leads, setLeads] = useState<Lead[]>([]);
-    const [sectionTemplates, setSectionTemplates] = useState<SectionTemplate[]>([]);
-    const [contracts, setContracts] = useState<Contract[]>([]);
-    const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>([]);
-    const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(null);
-    const [loading, setLoading] = useState(true);
+    // Read once per mount (lazy initializers below reuse the same object).
+    const cacheRef = useRef<DataSnapshot | null | undefined>(undefined);
+    if (cacheRef.current === undefined) cacheRef.current = readCache();
+    const cached = cacheRef.current;
 
-    const loadAll = useCallback(async (showLoading: boolean) => {
-        if (showLoading) setLoading(true);
+    const [proposals, setProposals] = useState<{ proposal: Proposal; client: Client | null }[]>(cached?.proposals ?? []);
+    const [cashFlows, setCashFlows] = useState<CashFlow[]>(cached?.cashFlows ?? []);
+    const [clients, setClients] = useState<Client[]>(cached?.clients ?? []);
+    const [services, setServices] = useState<Service[]>(cached?.services ?? []);
+    const [cashFlowCategories, setCashFlowCategories] = useState<CashFlowCategoryRecord[]>(cached?.cashFlowCategories ?? []);
+    const [tasks, setTasks] = useState<Task[]>(cached?.tasks ?? []);
+    const [leads, setLeads] = useState<Lead[]>(cached?.leads ?? []);
+    const [sectionTemplates, setSectionTemplates] = useState<SectionTemplate[]>(cached?.sectionTemplates ?? []);
+    const [contracts, setContracts] = useState<Contract[]>(cached?.contracts ?? []);
+    const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>(cached?.contractTemplates ?? []);
+    const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(cached?.agencySettings ?? null);
+    // With a snapshot on screen there is nothing to wait for; the fetch below
+    // refreshes silently. The spinner only shows on the very first login.
+    const [loading, setLoading] = useState(!cached);
+    const hasData = useRef(!!cached);
+    // Dedupes concurrent calls (StrictMode double-effects, rapid refetches):
+    // while one load is in flight, new callers await the same promise.
+    const inFlight = useRef<Promise<void> | null>(null);
 
-        const { data: propData } = await supabase
-            .from('proposals')
-            .select('*, client:clients(*)')
-            .order('created_at', { ascending: false });
+    const doLoad = useCallback(async (showLoading: boolean) => {
+        // Block the UI only when there is nothing on screen yet.
+        if (showLoading && !hasData.current) setLoading(true);
 
-        const { data: cashData } = await supabase
-            .from('cash_flow')
-            .select('*')
-            .order('date', { ascending: false });
+        // All queries fire in parallel: total wait = the slowest one, not the sum of all.
+        const [
+            { data: propData },
+            { data: cashData },
+            { data: clientData },
+            { data: serviceData },
+            { data: categoriesData },
+            { data: tasksData },
+            { data: leadsData },
+            { data: sectionTemplatesData },
+            { data: contractsData },
+            { data: contractTemplatesData },
+            { data: agencyData },
+        ] = await Promise.all([
+            supabase.from('proposals').select('*, client:clients(*)').order('created_at', { ascending: false }),
+            supabase.from('cash_flow').select('*').order('date', { ascending: false }),
+            supabase.from('clients').select('*').order('name', { ascending: true }),
+            supabase.from('services').select('*').order('name', { ascending: true }),
+            supabase.from('cash_flow_categories').select('*').order('type', { ascending: true }).order('name', { ascending: true }),
+            supabase.from('tasks').select('*').order('created_at', { ascending: false }),
+            supabase.from('leads').select('*').order('created_at', { ascending: false }),
+            supabase.from('proposal_section_templates').select('*').order('title', { ascending: true }),
+            supabase.from('contracts').select('*').order('created_at', { ascending: false }),
+            supabase.from('contract_templates').select('*').order('title', { ascending: true }),
+            supabase.from('agency_settings').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+        ]);
 
-        const { data: clientData } = await supabase
-            .from('clients')
-            .select('*')
-            .order('name', { ascending: true });
+        const mappedProposals = propData
+            ? propData.map((p: any) => ({ proposal: { ...p, client: undefined }, client: p.client }))
+            : null;
 
-        const { data: serviceData } = await supabase
-            .from('services')
-            .select('*')
-            .order('name', { ascending: true });
-
-        const { data: categoriesData } = await supabase
-            .from('cash_flow_categories')
-            .select('*')
-            .order('type', { ascending: true })
-            .order('name', { ascending: true });
-
-        const { data: tasksData } = await supabase
-            .from('tasks')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        const { data: leadsData } = await supabase
-            .from('leads')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        const { data: sectionTemplatesData } = await supabase
-            .from('proposal_section_templates')
-            .select('*')
-            .order('title', { ascending: true });
-
-        const { data: contractsData } = await supabase
-            .from('contracts')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        const { data: contractTemplatesData } = await supabase
-            .from('contract_templates')
-            .select('*')
-            .order('title', { ascending: true });
-
-        const { data: agencyData } = await supabase
-            .from('agency_settings')
-            .select('*')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-        if (propData) {
-            const mapped = propData.map((p: any) => ({
-                proposal: { ...p, client: undefined },
-                client: p.client,
-            }));
-            setProposals(mapped);
-        }
+        if (mappedProposals) setProposals(mappedProposals);
         if (cashData) setCashFlows(cashData as CashFlow[]);
         if (clientData) setClients(clientData as Client[]);
         if (serviceData) setServices(serviceData as Service[]);
@@ -95,8 +106,35 @@ export function useSupabase() {
         if (contractTemplatesData) setContractTemplates(contractTemplatesData as ContractTemplate[]);
         setAgencySettings((agencyData as AgencySettings) || null);
 
-        if (showLoading) setLoading(false);
+        hasData.current = true;
+        setLoading(false);
+
+        // Persist the snapshot for an instant paint on the next refresh.
+        // Quota/serialization failures just mean no cache — never break the app.
+        try {
+            const snapshot: DataSnapshot = {
+                proposals: mappedProposals ?? [],
+                cashFlows: (cashData as CashFlow[]) ?? [],
+                clients: (clientData as Client[]) ?? [],
+                services: (serviceData as Service[]) ?? [],
+                cashFlowCategories: (categoriesData as CashFlowCategoryRecord[]) ?? [],
+                tasks: (tasksData as Task[]) ?? [],
+                leads: (leadsData as Lead[]) ?? [],
+                sectionTemplates: (sectionTemplatesData as SectionTemplate[]) ?? [],
+                contracts: (contractsData as Contract[]) ?? [],
+                contractTemplates: (contractTemplatesData as ContractTemplate[]) ?? [],
+                agencySettings: (agencyData as AgencySettings) || null,
+            };
+            localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
+        } catch { /* noop */ }
     }, []);
+
+    const loadAll = useCallback((showLoading: boolean): Promise<void> => {
+        if (inFlight.current) return inFlight.current;
+        const run = doLoad(showLoading).finally(() => { inFlight.current = null; });
+        inFlight.current = run;
+        return run;
+    }, [doLoad]);
 
     const fetchDashboardData = useCallback(() => loadAll(true), [loadAll]);
     // Silent: refreshes data without triggering the loading spinner (keeps current view mounted)

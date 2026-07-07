@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
   BarChart3,
   FileText,
@@ -30,16 +30,18 @@ import {
   Download,
   ScrollText,
   ExternalLink,
+  Barcode,
   Inbox
 } from 'lucide-react';
 import './App.css';
-import { useSupabase } from './hooks/useSupabase';
-import { supabase } from './lib/supabase';
+import { useSupabase, clearDataCache } from './hooks/useSupabase';
+import { supabase, getStoredUser } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
 import { TasksView } from './components/TasksView';
 import { LeadsView } from './components/LeadsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
+import { AsaasSettingsView } from './components/AsaasSettingsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
 import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection, Contract, ContractTemplate, SignerField, AgencySettings } from './types/database';
 import type { User } from '@supabase/supabase-js';
@@ -57,9 +59,11 @@ function App() {
   const [approvalTarget, setApprovalTarget] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [printProposal, setPrintProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
 
-  // Auth State
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Auth State — hydrated synchronously from the stored session so a refresh
+  // renders the admin immediately; getSession/onAuthStateChange then confirm
+  // (or revoke) it in the background.
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [authLoading, setAuthLoading] = useState(user === null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -68,6 +72,7 @@ function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) clearDataCache();
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
@@ -91,8 +96,12 @@ function App() {
 
   const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch, silentRefetch } = useSupabase();
 
+  // Loads once per signed-in user. The ref guards against duplicated effect
+  // runs (React StrictMode) re-triggering the full load and re-showing the spinner.
+  const loadedForUser = useRef<string | null>(null);
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && loadedForUser.current !== user.id) {
+      loadedForUser.current = user.id;
       refetch();
     }
   }, [refetch, user?.id]);
@@ -139,6 +148,8 @@ function App() {
               <NavButton icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
               <NavButton icon={<Inbox size={18} />} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
               <NavButton icon={<FileText size={18} />} label="Propostas" active={activeTab === 'proposals'} onClick={() => setActiveTab('proposals')} />
+              <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
+              <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
               <NavButton icon={<ListTodo size={18} />} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
               <NavButton icon={<DollarSign size={18} />} label="Fluxo de Caixa" active={['cashflow', 'cashflow-categories', 'cashflow-all', 'cashflow-form'].includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
               {(activeTab === 'cashflow' || activeTab === 'cashflow-categories' || activeTab === 'cashflow-all' || activeTab === 'cashflow-form') && (
@@ -159,8 +170,6 @@ function App() {
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]/70">Catálogo</p>
               <NavButton icon={<Briefcase size={18} />} label="Serviços Base" active={activeTab === 'services' || activeTab === 'service-form'} onClick={() => setActiveTab('services')} />
               <NavButton icon={<Layers size={18} />} label="Modelos de Seção" active={activeTab === 'section-templates' || activeTab === 'section-template-form'} onClick={() => setActiveTab('section-templates')} />
-              <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
-              <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
             </div>
           </nav>
 
@@ -416,6 +425,7 @@ function App() {
                 {activeTab === 'settings' && (
                   <div className="max-w-xl mx-auto flex flex-col gap-6">
                     <AgencySettingsView onSaved={refetch} />
+                    <AsaasSettingsView />
                     <SettingsView />
                   </div>
                 )}
@@ -821,6 +831,10 @@ function SummaryCard({ title, value, icon, trend, trendUp }: any) {
 // -------------------------------------------------------------
 type ProposalData = { proposal: Proposal; client: Client | null };
 
+// Parcela na tela de aprovação. boleto=true gera cobrança no Asaas; caso
+// contrário usa `method` (forma de pagamento manual).
+type InstallmentRow = { date: string; value: number; boleto: boolean; method: string };
+
 function ApprovalModal({ target, onClose, onDone }: {
   target: ProposalData;
   onClose: () => void;
@@ -830,13 +844,27 @@ function ApprovalModal({ target, onClose, onDone }: {
   const originalInstallments = (savedContent?.installments as { date: string; value: number }[]) || [];
   const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const [installments, setInstallments] = useState(
-    originalInstallments.length > 0
+  // Formas de pagamento manuais (parcela que NÃO gera boleto no Asaas).
+  const PAYMENT_METHODS = ['Pix', 'Cartão', 'Depósito', 'Dinheiro'];
+
+  const [installments, setInstallments] = useState<InstallmentRow[]>(
+    (originalInstallments.length > 0
       ? originalInstallments
       : [{ date: new Date().toISOString().split('T')[0], value: target.proposal.value }]
+    ).map(x => ({ date: x.date, value: x.value, boleto: true, method: 'Pix' }))
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const existingDoc = target.client?.cnpj || target.client?.cpf || '';
+  const [docNumber, setDocNumber] = useState(existingDoc);
+  const [genBoletos, setGenBoletos] = useState(true);
+  // Aprovação concluída mas boletos falharam: rows já foram lançadas, então o
+  // fechamento precisa atualizar a lista (onDone), não descartar (onClose).
+  const [approvedPartial, setApprovedPartial] = useState(false);
+  // Guarda síncrona contra duplo-clique (o estado `loading` só desabilita o
+  // botão no próximo render; o ref bloqueia na hora).
+  const submitting = useRef(false);
 
   const clientName = target.client?.company_name || target.client?.name || 'Cliente';
   const serviceType = target.proposal.service_type || 'Serviço';
@@ -848,14 +876,42 @@ function ApprovalModal({ target, onClose, onDone }: {
   const updateValue = (i: number, v: number) => {
     const u = [...installments]; u[i] = { ...u[i], value: v }; setInstallments(u);
   };
+  const updateBoleto = (i: number, b: boolean) => {
+    const u = [...installments]; u[i] = { ...u[i], boleto: b }; setInstallments(u);
+  };
+  const updateMethod = (i: number, m: string) => {
+    const u = [...installments]; u[i] = { ...u[i], method: m }; setInstallments(u);
+  };
 
   const totalInstallments = installments.reduce((a, b) => a + b.value, 0);
   const isBalanced = Math.abs(totalInstallments - netValue) < 0.10;
+  // Uma parcela vira boleto quando a integração está ligada E o check da linha
+  // está marcado. As demais usam a forma de pagamento manual escolhida.
+  const isBoletoRow = (inst: InstallmentRow) => genBoletos && inst.boleto;
+  const anyBoleto = installments.some(isBoletoRow);
 
   const handleConfirm = async () => {
+    // Trava anti-duplicação (camada 1): duplo-clique síncrono.
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError(null);
     try {
+      // Trava anti-duplicação (camada 2): se a proposta já teve parcelas
+      // lançadas, não lança de novo (evita cobrar o cliente 2x).
+      const { data: existing, error: existErr } = await supabase
+        .from('cash_flow')
+        .select('id')
+        .eq('proposal_id', target.proposal.id)
+        .limit(1);
+      if (existErr) throw existErr;
+      if (existing && existing.length > 0) {
+        setError('Esta proposta já teve as parcelas lançadas no Fluxo de Caixa. Para relançar, exclua as parcelas atuais antes.');
+        setLoading(false);
+        submitting.current = false;
+        return;
+      }
+
       // 1. Update proposal status to Approved
       const { error: propErr } = await supabase
         .from('proposals')
@@ -863,7 +919,16 @@ function ApprovalModal({ target, onClose, onDone }: {
         .eq('id', target.proposal.id);
       if (propErr) throw propErr;
 
-      // 2. Insert cash_flow rows for each installment
+      // 2. Persist the payer document (CPF/CNPJ) on the client, if informed.
+      //    Boleto exige cpfCnpj; 11 dígitos = CPF, 14 = CNPJ.
+      const docDigits = docNumber.replace(/\D/g, '');
+      if (docDigits && target.proposal.client_id && docDigits !== existingDoc.replace(/\D/g, '')) {
+        const col = docDigits.length > 11 ? 'cnpj' : 'cpf';
+        await supabase.from('clients').update({ [col]: docNumber }).eq('id', target.proposal.client_id);
+      }
+
+      // 3. Insert cash_flow rows for each installment (linked to proposal/client).
+      //    payment_method: 'Boleto' para as que vão ao Asaas; senão a forma manual.
       const rows = installments.map((inst, i) => ({
         type: 'Income' as CashFlowType,
         category: 'Project_Spot' as CashFlowCategory,
@@ -871,15 +936,39 @@ function ApprovalModal({ target, onClose, onDone }: {
         value: inst.value,
         date: inst.date,
         status: 'Pending' as CashFlowStatus,
+        client_id: target.proposal.client_id,
+        proposal_id: target.proposal.id,
+        installment_number: i + 1,
+        payment_method: isBoletoRow(inst) ? 'Boleto' : inst.method,
       }));
       const { error: cfErr } = await supabase.from('cash_flow').insert(rows);
       if (cfErr) throw cfErr;
+
+      // 4. Gera boleto só para as parcelas marcadas (a função filtra por
+      //    payment_method = 'Boleto'). Pula se nenhuma parcela é boleto.
+      if (anyBoleto) {
+        const { data: gen, error: genErr } = await supabase.functions.invoke('asaas', {
+          body: { action: 'generate', proposal_id: target.proposal.id },
+        });
+        if (genErr || gen?.error) {
+          // Parcelas já foram lançadas; não bloqueia a aprovação. Avisa e deixa
+          // o usuário gerar depois pelo botão no Fluxo de Caixa.
+          setError(
+            `Parcelas lançadas, mas os boletos não foram gerados: ${gen?.error || genErr?.message}. ` +
+            `Você pode gerar depois no Fluxo de Caixa.`,
+          );
+          setApprovedPartial(true);
+          setLoading(false);
+          return;
+        }
+      }
 
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao aprovar. Tente novamente.');
     } finally {
       setLoading(false);
+      submitting.current = false;
     }
   };
 
@@ -915,6 +1004,29 @@ function ApprovalModal({ target, onClose, onDone }: {
           </div>
         </div>
 
+        {/* Payer document + boleto toggle */}
+        <div className="px-6 pt-4 pb-1">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <label className="text-xs font-semibold text-[var(--color-ink-3)] uppercase tracking-wider">CPF / CNPJ do pagador</label>
+              <input
+                type="text"
+                value={docNumber}
+                onChange={e => setDocNumber(e.target.value)}
+                placeholder="Obrigatório para gerar boleto"
+                className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-[var(--color-ink-2)] pb-2 cursor-pointer whitespace-nowrap">
+              <input type="checkbox" checked={genBoletos} onChange={e => setGenBoletos(e.target.checked)} className="w-4 h-4 accent-green-600 cursor-pointer" />
+              Gerar boletos no Asaas
+            </label>
+          </div>
+          {anyBoleto && !docNumber.trim() && (
+            <p className="text-xs text-orange-500 mt-1">Informe o CPF/CNPJ do pagador para o boleto ser aceito pelo Asaas.</p>
+          )}
+        </div>
+
         {/* Installments table */}
         <div className="px-6 py-4 max-h-72 overflow-y-auto">
           <p className="text-xs font-semibold text-[var(--color-ink-3)] uppercase tracking-wider mb-3">Parcelas a lançar ({installments.length}x)</p>
@@ -924,6 +1036,7 @@ function ApprovalModal({ target, onClose, onDone }: {
                 <th className="pb-2 text-left font-medium w-8">#</th>
                 <th className="pb-2 text-left font-medium">Data de Vencimento</th>
                 <th className="pb-2 text-left font-medium">Valor (R$)</th>
+                <th className="pb-2 text-left font-medium">Pagamento</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -934,13 +1047,35 @@ function ApprovalModal({ target, onClose, onDone }: {
                     <input type="date" value={inst.date} onChange={e => updateDate(i, e.target.value)}
                       className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-full" />
                   </td>
-                  <td className="py-2">
+                  <td className="py-2 pr-4">
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-ink-3)] font-medium">R$</span>
                       <input type="number" step="0.01" value={inst.value}
                         onChange={e => updateValue(i, parseFloat(e.target.value) || 0)}
                         className="border border-gray-200 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 w-36" />
                     </div>
+                  </td>
+                  <td className="py-2">
+                    {genBoletos ? (
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs text-[var(--color-ink-2)] cursor-pointer whitespace-nowrap">
+                          <input type="checkbox" checked={inst.boleto} onChange={e => updateBoleto(i, e.target.checked)}
+                            className="w-4 h-4 accent-green-600 cursor-pointer" />
+                          Boleto
+                        </label>
+                        {!inst.boleto && (
+                          <select value={inst.method} onChange={e => updateMethod(i, e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                            {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        )}
+                      </div>
+                    ) : (
+                      <select value={inst.method} onChange={e => updateMethod(i, e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                        {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -954,6 +1089,7 @@ function ApprovalModal({ target, onClose, onDone }: {
                   </span>
                   {!isBalanced && <p className="text-orange-500 text-xs mt-0.5">Difere do valor líquido em R$ {fmtBRL(Math.abs(totalInstallments - netValue))}</p>}
                 </td>
+                <td className="pt-3" />
               </tr>
             </tfoot>
           </table>
@@ -968,15 +1104,24 @@ function ApprovalModal({ target, onClose, onDone }: {
 
         {/* Actions */}
         <div className="px-6 pb-6 flex gap-3 justify-end border-t border-gray-100 pt-4">
-          <button type="button" onClick={onClose} disabled={loading}
-            className="px-5 py-2.5 border border-gray-200 text-[var(--color-ink-2)] rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
-            Cancelar
-          </button>
-          <button type="button" onClick={handleConfirm} disabled={loading}
-            className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shadow-lg shadow-green-200">
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-            {loading ? 'Aprovando...' : 'Confirmar e Lançar no Fluxo de Caixa'}
-          </button>
+          {approvedPartial ? (
+            <button type="button" onClick={onDone}
+              className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shadow-lg shadow-green-200">
+              <CheckCircle size={16} /> Concluir
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={onClose} disabled={loading}
+                className="px-5 py-2.5 border border-gray-200 text-[var(--color-ink-2)] rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">
+                Cancelar
+              </button>
+              <button type="button" onClick={handleConfirm} disabled={loading}
+                className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2 cursor-pointer shadow-lg shadow-green-200">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                {loading ? 'Aprovando...' : 'Confirmar e Lançar no Fluxo de Caixa'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1657,8 +1802,23 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
   };
 
   const handleSingleDelete = async (c: CashFlow) => {
-    if (!confirm(`Excluir "${c.description || 'sem descrição'}"?`)) return;
+    // Parcela não paga com boleto: cancela no Asaas antes de apagar.
+    const temBoletoAtivo = !!c.asaas_payment_id && c.status !== 'Paid';
+    const msg = temBoletoAtivo
+      ? `Excluir "${c.description || 'sem descrição'}"? O boleto também será cancelado no Asaas.`
+      : `Excluir "${c.description || 'sem descrição'}"?`;
+    if (!confirm(msg)) return;
     setIsDeleting(c.id);
+    if (temBoletoAtivo) {
+      const { data, error } = await supabase.functions.invoke('asaas', {
+        body: { action: 'cancel', payment_id: c.asaas_payment_id },
+      });
+      if (error || data?.error) {
+        alert(`Não foi possível cancelar o boleto: ${data?.error || error?.message}. A parcela não foi excluída.`);
+        setIsDeleting(null);
+        return;
+      }
+    }
     await supabase.from('cash_flow').delete().eq('id', c.id);
     setSelected(prev => { const n = new Set(prev); n.delete(c.id); return n; });
     refetch();
@@ -1666,13 +1826,31 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Excluir ${selected.size} lançamento(s) selecionado(s)?`)) return;
+    const rows = cashFlows.filter(c => selected.has(c.id));
+    const comBoleto = rows.filter(c => c.asaas_payment_id && c.status !== 'Paid').length;
+    const aviso = comBoleto > 0 ? ` ${comBoleto} boleto(s) não pago(s) também serão cancelados no Asaas.` : '';
+    if (!confirm(`Excluir ${selected.size} lançamento(s) selecionado(s)?${aviso}`)) return;
     setIsBulkDeleting(true);
-    const ids = Array.from(selected);
-    await supabase.from('cash_flow').delete().in('id', ids);
+
+    // Cancela os boletos não pagos um a um; só apaga os que deram certo.
+    const okIds: string[] = [];
+    const falhas: string[] = [];
+    for (const c of rows) {
+      if (c.asaas_payment_id && c.status !== 'Paid') {
+        const { data, error } = await supabase.functions.invoke('asaas', {
+          body: { action: 'cancel', payment_id: c.asaas_payment_id },
+        });
+        if (error || data?.error) { falhas.push(c.description || c.id); continue; }
+      }
+      okIds.push(c.id);
+    }
+    if (okIds.length) await supabase.from('cash_flow').delete().in('id', okIds);
     setSelected(new Set());
     refetch();
     setIsBulkDeleting(false);
+    if (falhas.length) {
+      alert(`Não foi possível cancelar o boleto de ${falhas.length} lançamento(s), que NÃO foram excluídos:\n- ${falhas.join('\n- ')}`);
+    }
   };
 
   const handleBulkStatus = async (status: 'Paid' | 'Pending') => {
@@ -1831,13 +2009,46 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [genId, setGenId] = useState<string | null>(null);
 
   const handleDelete = async (c: CashFlow) => {
-    if (!confirm(`Excluir o lançamento "${c.description || 'sem descrição'}"?`)) return;
+    // Parcela não paga com boleto: cancela no Asaas antes de apagar, senão o
+    // boleto continua ativo (o cliente ainda poderia pagar). Parcela já paga:
+    // apaga só do sistema, mantendo o registro no Asaas.
+    const temBoletoAtivo = !!c.asaas_payment_id && c.status !== 'Paid';
+    const msg = temBoletoAtivo
+      ? `Excluir "${c.description || 'sem descrição'}"? O boleto também será cancelado no Asaas.`
+      : `Excluir o lançamento "${c.description || 'sem descrição'}"?`;
+    if (!confirm(msg)) return;
+
     setIsDeleting(c.id);
+    if (temBoletoAtivo) {
+      const { data, error } = await supabase.functions.invoke('asaas', {
+        body: { action: 'cancel', payment_id: c.asaas_payment_id },
+      });
+      if (error || data?.error) {
+        alert(`Não foi possível cancelar o boleto: ${data?.error || error?.message}. A parcela não foi excluída.`);
+        setIsDeleting(null);
+        return;
+      }
+    }
     await supabase.from('cash_flow').delete().eq('id', c.id);
     refetch();
     setIsDeleting(null);
+  };
+
+  // Gera os boletos das parcelas pendentes desta proposta (uma por parcela).
+  const handleGenerateBoleto = async (c: CashFlow) => {
+    if (!c.proposal_id) return;
+    setGenId(c.id);
+    const { data, error } = await supabase.functions.invoke('asaas', {
+      body: { action: 'generate', proposal_id: c.proposal_id },
+    });
+    setGenId(null);
+    if (error || data?.error) {
+      alert(`Não foi possível gerar o boleto: ${data?.error || error?.message}`);
+    }
+    refetch();
   };
 
   const currentMonth = currentDate.getMonth();
@@ -1919,13 +2130,14 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
               <th className="p-4 font-medium">Categoria</th>
               <th className="p-4 font-medium">Valor</th>
               <th className="p-4 font-medium text-right">Status</th>
+              <th className="p-4 font-medium text-center">Boleto</th>
               <th className="p-4 pr-6 font-medium text-right">Ação</th>
             </tr>
           </thead>
           <tbody className="text-sm">
             {filteredCashFlows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-[var(--color-ink-3)]">Nenhum lançamento no fluxo de caixa para este mês.</td>
+                <td colSpan={7} className="p-8 text-center text-[var(--color-ink-3)]">Nenhum lançamento no fluxo de caixa para este mês.</td>
               </tr>
             ) : (
               filteredCashFlows.map(c => (
@@ -1953,6 +2165,28 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
                       <span className="badge badge-success">Pago</span>
                     ) : (
                       <span className="badge badge-warning">Pendente</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-center">
+                    {c.boleto_url ? (
+                      <a href={c.boleto_url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors"
+                        title="Abrir boleto">
+                        <Barcode size={15} /> Ver <ExternalLink size={12} />
+                      </a>
+                    ) : (c.payment_method && c.payment_method !== 'Boleto') ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-[var(--color-ink-2)]">
+                        {c.payment_method}
+                      </span>
+                    ) : (c.type === 'Income' && c.proposal_id) ? (
+                      <button onClick={() => handleGenerateBoleto(c)} disabled={genId === c.id}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-ink-3)] hover:text-sky-600 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Gerar boleto no Asaas">
+                        {genId === c.id ? <Loader2 size={14} className="animate-spin" /> : <Barcode size={15} />}
+                        Gerar
+                      </button>
+                    ) : (
+                      <span className="text-[var(--color-ink-3)] text-xs">—</span>
                     )}
                   </td>
                   <td className="p-4 pr-6 text-right">
@@ -2253,7 +2487,7 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
     };
     const syntheticClient: Client | null = clientMode === 'existing'
       ? (clients.find(c => c.id === selectedClientId) || null)
-      : (clientName ? { id: '', name: clientName, email: null, whatsapp: null, phone: null, cnpj: null, company_name: null, website: null, segment: null, city: null, state: null, funnel_stage: null, lead_source: null, notes: null, estimated_value: null, next_follow_up: null, tags: null, created_at: new Date().toISOString() } : null);
+      : (clientName ? { id: '', name: clientName, email: null, whatsapp: null, phone: null, cpf: null, cnpj: null, asaas_customer_id: null, company_name: null, website: null, segment: null, city: null, state: null, funnel_stage: null, lead_source: null, notes: null, estimated_value: null, next_follow_up: null, tags: null, created_at: new Date().toISOString() } : null);
     onPrint(syntheticProposal, syntheticClient);
   };
 

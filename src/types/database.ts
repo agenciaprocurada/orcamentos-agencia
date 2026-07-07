@@ -6,7 +6,9 @@ export type Client = {
   email: string | null;
   whatsapp: string | null;
   phone: string | null;
+  cpf: string | null;
   cnpj: string | null;
+  asaas_customer_id: string | null;
   company_name: string | null;
   website: string | null;
   segment: string | null;
@@ -138,6 +140,15 @@ export type AgencySettings = {
   updated_at: string;
 };
 
+export type AsaasEnvironment = 'sandbox' | 'production';
+
+export type IntegrationSettings = {
+  id: string;
+  asaas_environment: AsaasEnvironment;
+  asaas_enabled: boolean;
+  updated_at: string;
+};
+
 export type CashFlowType = 'Income' | 'Expense';
 export type CashFlowCategory = string; // Dynamic, from cash_flow_categories table
 export type CashFlowStatus = 'Paid' | 'Pending';
@@ -150,6 +161,13 @@ export type CashFlow = {
   date: string;
   description: string | null;
   status: CashFlowStatus;
+  client_id: string | null;
+  proposal_id: string | null;
+  installment_number: number | null;
+  asaas_payment_id: string | null;
+  boleto_url: string | null;
+  boleto_status: string | null;
+  payment_method: string | null;
   created_at: string;
 };
 
@@ -199,8 +217,8 @@ export interface Database {
       };
       clients: {
         Row: Client;
-        Insert: { id?: string; name: string; email?: string | null; whatsapp?: string | null; company_name?: string | null; created_at?: string; };
-        Update: { id?: string; name?: string; email?: string | null; whatsapp?: string | null; company_name?: string | null; created_at?: string; };
+        Insert: { id?: string; name: string; email?: string | null; whatsapp?: string | null; cpf?: string | null; cnpj?: string | null; asaas_customer_id?: string | null; company_name?: string | null; created_at?: string; };
+        Update: { id?: string; name?: string; email?: string | null; whatsapp?: string | null; cpf?: string | null; cnpj?: string | null; asaas_customer_id?: string | null; company_name?: string | null; created_at?: string; };
       };
       proposals: {
         Row: Proposal;
@@ -229,8 +247,8 @@ export interface Database {
       };
       cash_flow: {
         Row: CashFlow;
-        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; created_at?: string; };
-        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; created_at?: string; };
+        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; created_at?: string; };
+        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; created_at?: string; };
       };
       cash_flow_categories: {
         Row: CashFlowCategoryRecord;
@@ -246,6 +264,11 @@ export interface Database {
         Row: Lead;
         Insert: { id?: string; name: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
         Update: { id?: string; name?: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
+      };
+      integration_settings: {
+        Row: IntegrationSettings;
+        Insert: { id?: string; asaas_environment?: AsaasEnvironment; asaas_enabled?: boolean; updated_at?: string; };
+        Update: { id?: string; asaas_environment?: AsaasEnvironment; asaas_enabled?: boolean; updated_at?: string; };
       };
     };
   };
