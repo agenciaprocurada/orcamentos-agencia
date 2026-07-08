@@ -213,6 +213,7 @@ export type RecurringExpense = {
   description: string;
   value: number;
   category: string;
+  type: CashFlowType; // receita ou despesa recorrente
   account_id: string | null;
   supplier_id: string | null;
   due_day: number;
@@ -315,8 +316,8 @@ export interface Database {
       };
       recurring_expenses: {
         Row: RecurringExpense;
-        Insert: { id?: string; description: string; value: number; category: string; account_id?: string | null; supplier_id?: string | null; due_day: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
-        Update: { id?: string; description?: string; value?: number; category?: string; account_id?: string | null; supplier_id?: string | null; due_day?: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
+        Insert: { id?: string; description: string; value: number; category: string; type?: CashFlowType; account_id?: string | null; supplier_id?: string | null; due_day: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
+        Update: { id?: string; description?: string; value?: number; category?: string; type?: CashFlowType; account_id?: string | null; supplier_id?: string | null; due_day?: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
       };
       account_transfers: {
         Row: AccountTransfer;

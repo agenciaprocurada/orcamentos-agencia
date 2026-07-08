@@ -40,13 +40,14 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
 );
 
 -- =====================================================================
--- 3. Despesas recorrentes (fixas)
+-- 3. Recorrências (receitas e despesas fixas mensais)
 -- =====================================================================
 CREATE TABLE IF NOT EXISTS public.recurring_expenses (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     description text NOT NULL,
     value numeric(12,2) NOT NULL,
     category text NOT NULL,
+    type text CHECK (type IN ('Income', 'Expense')) DEFAULT 'Expense' NOT NULL,
     account_id uuid REFERENCES public.bank_accounts(id) ON DELETE SET NULL,
     supplier_id uuid REFERENCES public.suppliers(id) ON DELETE SET NULL,
     due_day int CHECK (due_day BETWEEN 1 AND 31) NOT NULL,
@@ -55,6 +56,10 @@ CREATE TABLE IF NOT EXISTS public.recurring_expenses (
     end_date date,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Instalações que rodaram a versão anterior deste arquivo (sem type):
+ALTER TABLE public.recurring_expenses
+    ADD COLUMN IF NOT EXISTS type text CHECK (type IN ('Income', 'Expense')) DEFAULT 'Expense' NOT NULL;
 
 -- =====================================================================
 -- 4. Transferências entre contas
@@ -137,7 +142,7 @@ CREATE TRIGGER trg_cash_flow_asaas_account
     FOR EACH ROW EXECUTE FUNCTION public.fn_cash_flow_asaas_account();
 
 -- =====================================================================
--- 8. Geração idempotente das despesas recorrentes de um mês.
+-- 8. Geração idempotente das recorrências (receitas e despesas) de um mês.
 --    Default: mês atual. Chamada na carga do app e pelo botão "Gerar
 --    lançamentos do mês". Rodar 2x no mesmo mês não duplica nada
 --    (ON CONFLICT no índice único parcial). Dia 29-31 é limitado ao
@@ -155,7 +160,7 @@ BEGIN
     INSERT INTO public.cash_flow
         (type, category, description, value, date, status,
          account_id, supplier_id, recurring_expense_id, competence)
-    SELECT 'Expense', r.category, r.description, r.value,
+    SELECT r.type, r.category, r.description, r.value,
            LEAST(v_first + (r.due_day - 1), v_last),
            'Pending', r.account_id, r.supplier_id, r.id, p_month
     FROM public.recurring_expenses r

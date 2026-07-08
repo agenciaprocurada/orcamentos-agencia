@@ -12,7 +12,6 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
   refetch: () => void;
 }) {
   const activeAccounts = accounts.filter(a => a.active);
-  const expenseCategories = categories.filter(c => c.type === 'Expense');
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecurringExpense | null>(null);
@@ -28,15 +27,11 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const monthlyTotal = recurring.filter(r => r.active).reduce((s, r) => s + Number(r.value), 0);
-
-  const openNew = () => {
-    setEditing(null);
-    setDescription(''); setValue(''); setCategory(expenseCategories[0]?.name || '');
-    setAccountId(activeAccounts.find(a => a.is_default)?.id || '');
-    setSupplierId(''); setDueDay('5'); setActive(true);
-    setShowForm(true);
-  };
+  const active_ = recurring.filter(r => r.active);
+  const monthlyExpense = active_.filter(r => r.type !== 'Income').reduce((s, r) => s + Number(r.value), 0);
+  const monthlyIncome = active_.filter(r => r.type === 'Income').reduce((s, r) => s + Number(r.value), 0);
+  // Categorias compatíveis com o tipo da recorrência em edição.
+  const formCategories = categories.filter(c => c.type === (editing?.type === 'Income' ? 'Income' : 'Expense'));
 
   const openEdit = (r: RecurringExpense) => {
     setEditing(r);
@@ -112,10 +107,15 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
 
       <div className="glass-panel p-6 flex flex-wrap items-center gap-4">
         <div className="flex-1 min-w-[200px]">
-          <p className="text-xs uppercase tracking-wider font-semibold text-[var(--color-ink-3)]">Total fixo mensal (ativas)</p>
-          <p className="text-2xl font-bold text-[var(--color-ink)]">{formatBRL(monthlyTotal)}</p>
+          <p className="text-xs uppercase tracking-wider font-semibold text-[var(--color-ink-3)]">Fixo mensal (ativas)</p>
+          <p className="text-2xl font-bold [font-variant-numeric:tabular-nums]">
+            <span className="text-emerald-700">+ {formatBRL(monthlyIncome)}</span>
+            <span className="text-[var(--color-ink-3)] font-normal text-lg mx-2">·</span>
+            <span className="text-rose-600">− {formatBRL(monthlyExpense)}</span>
+          </p>
           <p className="text-xs text-[var(--color-ink-3)] mt-0.5">
-            Os lançamentos do mês são gerados automaticamente ao abrir o sistema, como despesas Pendentes.
+            Para criar, lance uma receita ou despesa e marque "recorrente".
+            Os lançamentos do mês entram automaticamente como pendentes ao abrir o sistema.
           </p>
         </div>
         <div className="flex gap-2">
@@ -123,7 +123,6 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
             {generating ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
             Gerar lançamentos do mês
           </button>
-          <button onClick={openNew} className="btn-primary"><Plus size={18} /> Nova Recorrência</button>
         </div>
       </div>
 
@@ -152,23 +151,25 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
               <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Categoria *</label>
               <select value={category} onChange={e => setCategory(e.target.value)} required className="field-input">
                 <option value="">Selecione…</option>
-                {expenseCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                {formCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Conta de pagamento</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Conta</label>
               <select value={accountId} onChange={e => setAccountId(e.target.value)} className="field-input">
                 <option value="">Sem conta</option>
                 {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Fornecedor</label>
-              <select value={supplierId} onChange={e => setSupplierId(e.target.value)} className="field-input">
-                <option value="">Sem fornecedor</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
+            {editing?.type !== 'Income' && (
+              <div>
+                <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Fornecedor</label>
+                <select value={supplierId} onChange={e => setSupplierId(e.target.value)} className="field-input">
+                  <option value="">Sem fornecedor</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm text-[var(--color-ink-2)] cursor-pointer w-fit pt-5">
               <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} className="w-4 h-4 accent-[#C13584]" />
               Ativa (gera lançamento todo mês)
@@ -188,7 +189,9 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
           <p className="text-sm font-semibold text-[var(--color-ink-2)]">{recurring.length} recorrência{recurring.length !== 1 ? 's' : ''}</p>
         </div>
         {recurring.length === 0 ? (
-          <div className="p-8 text-center text-[var(--color-ink-3)] text-sm">Nenhuma despesa recorrente cadastrada ainda.</div>
+          <div className="p-8 text-center text-[var(--color-ink-3)] text-sm">
+            Nenhuma recorrência ainda. Lance uma receita ou despesa e marque "recorrente" para ela aparecer aqui.
+          </div>
         ) : (
           <ul className="divide-y divide-white/30">
             {recurring.map(r => (
@@ -207,7 +210,9 @@ export function RecurringExpensesView({ recurring, accounts, suppliers, categori
                     {supplierName(r.supplier_id) ? ` · ${supplierName(r.supplier_id)}` : ''}
                   </p>
                 </div>
-                <span className="text-sm font-bold text-red-600 flex-shrink-0">{formatBRL(Number(r.value))}</span>
+                <span className={`text-sm font-bold flex-shrink-0 [font-variant-numeric:tabular-nums] ${r.type === 'Income' ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  {r.type === 'Income' ? '+' : '−'} {formatBRL(Number(r.value))}
+                </span>
                 <button onClick={() => openEdit(r)} className="icon-action flex-shrink-0"><Pencil size={15} /></button>
                 <button onClick={() => handleDelete(r)} disabled={deleting === r.id}
                   className="text-gray-300 hover:text-red-500 transition-colors cursor-pointer p-1 flex-shrink-0">
