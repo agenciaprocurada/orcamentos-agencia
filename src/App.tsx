@@ -6,8 +6,6 @@ import {
   LayoutDashboard,
   Plus,
   Filter,
-  ArrowUpRight,
-  ArrowDownRight,
   Loader2,
   Trash2,
   Edit2,
@@ -33,7 +31,13 @@ import {
   Barcode,
   Inbox,
   Menu,
-  X
+  X,
+  Clock,
+  CreditCard,
+  QrCode,
+  Banknote,
+  Landmark,
+  RefreshCw
 } from 'lucide-react';
 import './App.css';
 import { useSupabase, clearDataCache } from './hooks/useSupabase';
@@ -44,6 +48,7 @@ import { LeadsView } from './components/LeadsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
 import { AsaasSettingsView } from './components/AsaasSettingsView';
+import { FinanceOverviewView } from './components/FinanceOverviewView';
 import { FinanceAccountsView } from './components/FinanceAccountsView';
 import { TransfersView } from './components/TransfersView';
 import { RecurringExpensesView } from './components/RecurringExpensesView';
@@ -56,8 +61,59 @@ import type { User } from '@supabase/supabase-js';
 // Abas agrupadas sob o item "Financeiro" da sidebar.
 const FINANCE_TABS: string[] = ['cashflow', 'cashflow-all', 'cashflow-categories', 'cashflow-form', 'finance-accounts', 'finance-transfers', 'finance-recurring', 'finance-suppliers', 'finance-reports'];
 
+// Ícone de status do lançamento nas listagens: recebido/pago, pendente ou em atraso.
+function CashStatusIcon({ c }: { c: CashFlow }) {
+  const overdue = c.status === 'Pending' && c.date < new Date().toISOString().split('T')[0];
+  if (c.status === 'Paid') {
+    return <span title={c.type === 'Income' ? 'Recebido' : 'Pago'} className="flex flex-shrink-0 text-emerald-500"><CheckCircle size={17} /></span>;
+  }
+  if (overdue) {
+    return <span title="Em atraso" className="flex flex-shrink-0 text-rose-500"><AlertCircle size={17} /></span>;
+  }
+  return <span title="Pendente" className="flex flex-shrink-0 text-amber-500"><Clock size={17} /></span>;
+}
+
+// Forma de recebimento/pagamento como ícone (abaixo do valor nas listagens).
+// Boleto emitido é link; parcela destinada a boleto sem emissão mostra "Gerar"
+// quando a tela oferece essa ação.
+function PaymentSlot({ c, genBusy, onGenerate }: { c: CashFlow; genBusy?: boolean; onGenerate?: (c: CashFlow) => void }) {
+  if (c.boleto_url) {
+    return (
+      <a href={c.boleto_url} target="_blank" rel="noopener noreferrer" title="Ver boleto"
+        className="flex text-sky-600 hover:text-sky-700 transition-colors">
+        <Barcode size={15} />
+      </a>
+    );
+  }
+  if (onGenerate && c.type === 'Income' && c.proposal_id && (c.payment_method === 'Boleto' || !c.payment_method)) {
+    return (
+      <button onClick={() => onGenerate(c)} disabled={genBusy} title="Gerar boleto no Asaas"
+        className="inline-flex items-center gap-1 text-[11px] text-[var(--color-ink-3)] underline decoration-dotted underline-offset-2 hover:text-sky-600 transition-colors cursor-pointer disabled:opacity-50">
+        {genBusy ? <Loader2 size={12} className="animate-spin" /> : <Barcode size={13} />} Gerar
+      </button>
+    );
+  }
+  if (c.payment_method) {
+    const icons: Record<string, ReactNode> = {
+      Pix: <QrCode size={15} />,
+      'Cartão': <CreditCard size={15} />,
+      'Depósito': <Landmark size={15} />,
+      Dinheiro: <Banknote size={15} />,
+      Boleto: <Barcode size={15} />,
+    };
+    return (
+      <span title={c.payment_method} className="flex text-[var(--color-ink-3)]">
+        {icons[c.payment_method] ?? <span className="text-[11px]">{c.payment_method}</span>}
+      </span>
+    );
+  }
+  return null;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
+  // Tipo pré-selecionado ao abrir "Novo Lançamento" pelos atalhos Nova receita/Nova despesa.
+  const [newCashFlowType, setNewCashFlowType] = useState<CashFlowType>('Income');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSectionTemplate, setSelectedSectionTemplate] = useState<SectionTemplate | null>(null);
@@ -72,6 +128,10 @@ function App() {
   // Gaveta de navegação no mobile. Fecha sozinha ao trocar de aba.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => { setSidebarOpen(false); }, [activeTab]);
+
+  // Botão de atualizar dados ao lado do logo: recarrega tudo em silêncio,
+  // sem spinner de tela cheia e sem sair da tela atual.
+  const [refreshing, setRefreshing] = useState(false);
 
   // Auth State — hydrated synchronously from the stored session so a refresh
   // renders the admin immediately; getSession/onAuthStateChange then confirm
@@ -161,15 +221,28 @@ function App() {
           />
         )}
         {/* Sidebar — refined glass, grouped navigation. Gaveta off-canvas no mobile, fixa no desktop (lg+). */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-[50] w-64 max-w-[82vw] bg-white/85 lg:bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 py-6 flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden transition-transform duration-300 ease-out lg:transition-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed lg:static inset-y-0 left-0 z-[50] w-64 max-w-[82vw] bg-white/85 lg:bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden transition-transform duration-300 ease-out lg:transition-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C13584] to-violet-600 shadow-[0_4px_12px_-2px_rgba(193,53,132,0.5)] flex items-center justify-center">
               <span className="text-white font-bold text-lg leading-none">O</span>
             </div>
             <h1 className="text-lg font-bold tracking-tight text-[var(--color-ink)]">OctaOS <span className="font-normal text-[var(--color-ink-3)]">CRM</span></h1>
             <button
+              onClick={async () => {
+                if (refreshing) return;
+                setRefreshing(true);
+                try { await silentRefetch(); } finally { setRefreshing(false); }
+              }}
+              disabled={refreshing}
+              className="ml-auto icon-action disabled:opacity-60"
+              title="Atualizar dados"
+              aria-label="Atualizar dados"
+            >
+              <RefreshCw size={17} className={refreshing ? 'animate-spin' : ''} />
+            </button>
+            <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden ml-auto icon-action"
+              className="lg:hidden icon-action"
               aria-label="Fechar menu"
             >
               <X size={20} />
@@ -238,7 +311,8 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto flex flex-col h-full print:overflow-visible">
-          <header className="h-[68px] flex-shrink-0 border-b glass-raised flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-[20] print:hidden">
+          {/* pt-safe: no PWA do iOS o conteúdo passa por baixo da barra de status; o env() empurra o header para a área visível */}
+          <header className="h-[calc(68px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex-shrink-0 border-b glass-raised flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-[20] print:hidden">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -260,7 +334,7 @@ function App() {
                               activeTab === 'cashflow-categories' ? 'Categorias Financeiras' :
                                 activeTab === 'finance-accounts' ? 'Contas Bancárias' :
                                 activeTab === 'finance-transfers' ? 'Transferências entre Contas' :
-                                activeTab === 'finance-recurring' ? 'Despesas Recorrentes' :
+                                activeTab === 'finance-recurring' ? 'Recorrências (Receitas e Despesas)' :
                                 activeTab === 'finance-suppliers' ? 'Fornecedores' :
                                 activeTab === 'finance-reports' ? 'Relatórios (DRE)' :
                                 activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
@@ -282,20 +356,29 @@ function App() {
                   Nova Proposta
                 </button>
               )}
+              {activeTab === 'dashboard' && (
+                <>
+                  <button onClick={() => { setSelectedCashFlow(null); setNewCashFlowType('Income'); setActiveTab('cashflow-form'); }}
+                    className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer">
+                    <Plus size={16} /> Nova receita
+                  </button>
+                  <button onClick={() => { setSelectedCashFlow(null); setNewCashFlowType('Expense'); setActiveTab('cashflow-form'); }}
+                    className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer">
+                    <Plus size={16} /> Nova despesa
+                  </button>
+                  <button onClick={() => { setSelectedCashFlow(null); setNewCashFlowType('Income'); setActiveTab('cashflow-form'); }} className="btn-primary sm:hidden">
+                    <Plus size={18} /> Novo
+                  </button>
+                </>
+              )}
               {(activeTab === 'cashflow' || activeTab === 'cashflow-all') && (
-                <button onClick={() => { setSelectedCashFlow(null); setActiveTab('cashflow-form'); }} className="btn-primary">
+                <button onClick={() => { setSelectedCashFlow(null); setNewCashFlowType('Income'); setActiveTab('cashflow-form'); }} className="btn-primary">
                   <Plus size={18} />
                   Novo Registro
                 </button>
               )}
               {activeTab === 'cashflow-categories' && (
                 <span className="text-sm text-[var(--color-ink-3)] italic">Gerencie as categorias abaixo</span>
-              )}
-              {activeTab === 'dashboard' && (
-                <button onClick={() => { setSelectedProposal(null); setActiveTab('proposal-form'); }} className="btn-primary">
-                  <Plus size={18} />
-                  Criar Rápido
-                </button>
               )}
               {activeTab === 'services' && (
                 <button id="btn-new-service" onClick={() => { setSelectedService(null); setActiveTab('service-form'); }} className="btn-primary">
@@ -338,7 +421,7 @@ function App() {
               </div>
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
-                {activeTab === 'dashboard' && <DashboardView proposals={proposals} cashFlows={cashFlows} />}
+                {activeTab === 'dashboard' && <FinanceOverviewView cashFlows={cashFlows} accounts={bankAccounts} transfers={accountTransfers} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
                 {activeTab === 'tasks' && <TasksView tasks={tasks} refetch={refetch} />}
                 {activeTab === 'leads' && <LeadsView leads={leads} refetch={silentRefetch} />}
                 {activeTab === 'proposals' && (
@@ -381,10 +464,10 @@ function App() {
                     }}
                   />
                 )}
-                {activeTab === 'cashflow' && <CashFlowView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
-                {activeTab === 'cashflow-all' && <CashFlowAllView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
+                {activeTab === 'cashflow' && <CashFlowView cashFlows={cashFlows} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
+                {activeTab === 'cashflow-all' && <CashFlowAllView cashFlows={cashFlows} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
                 {activeTab === 'cashflow-categories' && <CashFlowCategoriesView categories={cashFlowCategories} refetch={refetch} />}
-                {activeTab === 'finance-accounts' && <FinanceAccountsView accounts={bankAccounts} cashFlows={cashFlows} transfers={accountTransfers} refetch={silentRefetch} />}
+                {activeTab === 'finance-accounts' &&<FinanceAccountsView accounts={bankAccounts} cashFlows={cashFlows} transfers={accountTransfers} refetch={silentRefetch} />}
                 {activeTab === 'finance-transfers' && <TransfersView accounts={bankAccounts} transfers={accountTransfers} refetch={silentRefetch} />}
                 {activeTab === 'finance-recurring' && <RecurringExpensesView recurring={recurringExpenses} accounts={bankAccounts} suppliers={suppliers} categories={cashFlowCategories} refetch={silentRefetch} />}
                 {activeTab === 'finance-suppliers' && <SuppliersView suppliers={suppliers} cashFlows={cashFlows} refetch={silentRefetch} />}
@@ -395,6 +478,7 @@ function App() {
                     cashFlowCategories={cashFlowCategories}
                     bankAccounts={bankAccounts}
                     suppliers={suppliers}
+                    defaultType={newCashFlowType}
                     onSave={() => { setActiveTab('cashflow'); refetch(); }}
                     onCancel={() => setActiveTab('cashflow')}
                   />
@@ -770,127 +854,6 @@ function AdditionalSectionsRender({ sections, templates, rv }: {
 }
 
 // -------------------------------------------------------------
-function DashboardView({ proposals, cashFlows }: { proposals: any[], cashFlows: CashFlow[] }) {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-
-  const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  // Filter to current month (using local timezone parse)
-  const currentMonthFlows = cashFlows.filter(c => {
-    const d = new Date(c.date + 'T00:00:00');
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  });
-
-  // All income of the month (Paid + Pending = total billed)
-  const totalIncomeMes = currentMonthFlows.filter(c => c.type === 'Income').reduce((acc, c) => acc + Number(c.value), 0);
-  // Only what was actually received (Paid)
-  const totalRecebido = currentMonthFlows.filter(c => c.type === 'Income' && c.status === 'Paid').reduce((acc, c) => acc + Number(c.value), 0);
-  // Only what is pending
-  const totalAReceber = currentMonthFlows.filter(c => c.type === 'Income' && c.status === 'Pending').reduce((acc, c) => acc + Number(c.value), 0);
-
-  const totalExpenseMes = currentMonthFlows.filter(c => c.type === 'Expense').reduce((acc, c) => acc + Number(c.value), 0);
-  const saldoMes = totalIncomeMes - totalExpenseMes;
-
-  // Active proposals irrespective of month
-  const activeProposalsCount = proposals.filter(p => p.proposal.status === 'Sent' || p.proposal.status === 'Approved').length;
-  const approvedProposalsCount = proposals.filter(p => p.proposal.status === 'Approved').length;
-
-  // Most recent 3 cash flow entries (ordered by date desc from hook)
-  const recentCashFlows = cashFlows.slice(0, 3);
-
-  return (
-    <div className="flex flex-col gap-8">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <SummaryCard
-          title="Faturamento do Mês"
-          value={`R$ ${fmtBRL(saldoMes)}`}
-          icon={<DollarSign className="text-[#C13584]" />}
-          trend={saldoMes >= 0 ? "Receitas acima das despesas" : "Despesas acima das receitas"}
-          trendUp={saldoMes >= 0}
-        />
-        <SummaryCard
-          title="Recebido (Pago)"
-          value={`R$ ${fmtBRL(totalRecebido)}`}
-          icon={<ArrowUpRight className="text-green-500" />}
-          trend="Receitas confirmadas"
-          trendUp={true}
-        />
-        <SummaryCard
-          title="A Receber (Pendente)"
-          value={`R$ ${fmtBRL(totalAReceber)}`}
-          icon={<BarChart3 className="text-[#C13584]" />}
-          trend="Aguardando pagamento"
-          trendUp={true}
-        />
-        <SummaryCard
-          title="Propostas Ativas"
-          value={activeProposalsCount}
-          icon={<FileText className="text-[#C13584]" />}
-          trend={`${approvedProposalsCount} aprovadas`}
-          trendUp={true}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="col-span-2 glass-panel p-6">
-          <h3 className="panel-title mb-6">Desempenho Financeiro</h3>
-          <div className="h-64 flex flex-col items-center justify-center glass-inset border-dashed text-[var(--color-ink-3)] gap-3">
-            <BarChart3 size={40} className="text-[var(--color-ink-3)]/50" />
-            <p className="text-sm">Os gráficos de série temporal estarão disponíveis nas próximas etapas.</p>
-          </div>
-        </div>
-        <div className="glass-panel p-6">
-          <h3 className="panel-title mb-6">Últimos Lançamentos</h3>
-          <div className="flex flex-col gap-6">
-            {recentCashFlows.length === 0 ? (
-              <p className="text-sm text-[var(--color-ink-3)] italic">Nenhum lançamento.</p>
-            ) : (
-              recentCashFlows.map(c => (
-                <div key={c.id} className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${c.type === 'Income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                    {c.type === 'Income' ? <ArrowUpRight size={20} /> : <ArrowDownRight size={20} />}
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-medium text-sm text-[var(--color-ink)] truncate">{c.description || 'Sem descrição'}</p>
-                    <p className="text-xs text-[var(--color-ink-3)] mt-1">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')} • {c.status === 'Paid' ? 'Pago' : 'Pendente'}</p>
-                  </div>
-                  <p className={`font-semibold text-sm whitespace-nowrap ${c.type === 'Income' ? 'text-green-600' : 'text-red-600'}`}>
-                    {c.type === 'Income' ? '+' : '-'} R$ {fmtBRL(Number(c.value))}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SummaryCard({ title, value, icon, trend, trendUp }: any) {
-  return (
-    <div className="glass-card glass-card-hover p-6 flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium text-[var(--color-ink-3)]">{title}</p>
-        <div className="p-2 glass-inset">
-          {icon}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-2xl font-bold text-[var(--color-ink)] tracking-tight">{value}</h3>
-        <p className={`text-sm mt-1.5 flex items-center gap-1 font-medium ${trendUp ? 'text-emerald-600' : 'text-rose-500'}`}>
-          {trendUp ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-          {trend}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// -------------------------------------------------------------
 // APPROVAL MODAL
 // -------------------------------------------------------------
 type ProposalData = { proposal: Proposal; client: Client | null };
@@ -1003,7 +966,7 @@ function ApprovalModal({ target, bankAccounts, onClose, onDone }: {
       //    payment_method: 'Boleto' para as que vão ao Asaas; senão a forma manual.
       const rows = installments.map((inst, i) => ({
         type: 'Income' as CashFlowType,
-        category: 'Project_Spot' as CashFlowCategory,
+        category: 'Projeto Fechado / Site' as CashFlowCategory,
         description: `Parcela ${i + 1}/${installments.length} – ${clientName} – ${serviceType}`,
         value: inst.value,
         date: inst.date,
@@ -1843,9 +1806,8 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
 // -------------------------------------------------------------
 // CASHFLOW ALL VIEW (all records with multi-select + bulk actions)
 // -------------------------------------------------------------
-function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashFlow, refetch }: {
+function CashFlowAllView({ cashFlows, bankAccounts, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
-  cashFlowCategories: CashFlowCategoryRecord[];
   bankAccounts: BankAccount[];
   onEditCashFlow: (c: CashFlow) => void;
   refetch: () => void;
@@ -1859,8 +1821,23 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCa
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const markPaid = async (c: CashFlow) => {
+    setPayingId(c.id);
+    const { error } = await supabase.from('cash_flow').update({ status: 'Paid' }).eq('id', c.id);
+    if (error) alert(`Não foi possível marcar como pago: ${error.message}`);
+    await refetch();
+    setPayingId(null);
+  };
+
+  const monthLabel = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    const s = new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
 
   const filtered = cashFlows.filter(c => {
     const matchSearch = !search || (c.description || '').toLowerCase().includes(search.toLowerCase()) || c.category.toLowerCase().includes(search.toLowerCase());
@@ -1951,6 +1928,18 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCa
 
   const uniqueCategories = [...new Set(cashFlows.map(c => c.category))].sort();
 
+  // Extrato agrupado por mês (a lista cobre todos os meses), mais recente primeiro.
+  const monthGroups = (() => {
+    const map = new Map<string, CashFlow[]>();
+    for (const c of filtered) {
+      const key = c.date.slice(0, 7);
+      const list = map.get(key) || [];
+      list.push(c);
+      map.set(key, list);
+    }
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  })();
+
   return (
     <div className="flex flex-col gap-4">
       {/* Filters row */}
@@ -1963,24 +1952,24 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCa
             className="field-input pl-9" />
         </div>
         <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
-          className="field-input cursor-pointer">
+          className="field-input cursor-pointer sm:flex-none" style={{ width: 'auto' }}>
           <option value="all">Todos os tipos</option>
           <option value="Income">Receitas</option>
           <option value="Expense">Despesas</option>
         </select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}
-          className="field-input cursor-pointer">
+          className="field-input cursor-pointer sm:flex-none" style={{ width: 'auto' }}>
           <option value="all">Todos os status</option>
           <option value="Paid">Pago</option>
           <option value="Pending">Pendente</option>
         </select>
         <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-          className="field-input cursor-pointer">
+          className="field-input cursor-pointer sm:flex-none" style={{ width: 'auto' }}>
           <option value="all">Todas as categorias</option>
           {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
         <select value={filterAccount} onChange={e => setFilterAccount(e.target.value)}
-          className="field-input cursor-pointer">
+          className="field-input cursor-pointer sm:flex-none" style={{ width: 'auto' }}>
           <option value="all">Todas as contas</option>
           <option value="none">Sem conta</option>
           {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -2011,93 +2000,80 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCa
         </div>
       )}
 
-      {/* Table */}
-      <div className="glass-panel overflow-hidden">
-        <div className="p-3 border-b border-white/40 bg-white/20 flex items-center gap-2">
-          <p className="text-xs text-[var(--color-ink-3)] font-medium">{filtered.length} lançamento(s) encontrado(s)</p>
+      {/* Extrato (mesma linguagem visual do Por Mês), agrupado por mês */}
+      <div className="glass-panel overflow-hidden [font-variant-numeric:tabular-nums]">
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-2.5 border-b border-white/50 bg-white/25">
+          <label className="flex items-center gap-2 text-xs text-[var(--color-ink-3)] cursor-pointer select-none">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll}
+              className="w-4 h-4 rounded accent-[#C13584] cursor-pointer" />
+            Selecionar tudo
+          </label>
+          <span className="ml-auto text-xs text-[var(--color-ink-3)]">
+            {filtered.length} lançamento{filtered.length !== 1 ? 's' : ''}
+          </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/60 text-xs text-[var(--color-ink-3)] uppercase tracking-wider">
-              <tr>
-                <th className="p-3 pl-4 text-left w-10">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                    className="w-4 h-4 rounded accent-[#C13584] cursor-pointer" />
-                </th>
-                <th className="p-3 text-left">Data</th>
-                <th className="p-3 text-left">Descrição</th>
-                <th className="p-3 text-left">Categoria</th>
-                <th className="p-3 text-left">Conta</th>
-                <th className="p-3 text-left">Tipo</th>
-                <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 pr-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100/60">
-              {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-10 text-center text-[var(--color-ink-3)] text-sm">Nenhum lançamento encontrado.</td></tr>
-              ) : (
-                filtered.map(c => {
-                  const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
-                  const color = catRecord?.color || '#6B7280';
-                  const isSelected = selected.has(c.id);
-                  return (
-                    <tr key={c.id} className={`hover:bg-gray-50/80 transition-colors ${isSelected ? 'bg-pink-50/40' : ''}`}>
-                      <td className="p-3 pl-4">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleOne(c.id)}
-                          className="w-4 h-4 rounded accent-[#C13584] cursor-pointer" />
-                      </td>
-                      <td className="p-3 text-[var(--color-ink-3)] whitespace-nowrap font-medium">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                      <td className="p-3 text-[var(--color-ink)] max-w-[200px] truncate">{c.description || <span className="text-[var(--color-ink-3)] italic">Sem descrição</span>}</td>
-                      <td className="p-3">
-                        <span className="px-2 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1"
-                          style={{ backgroundColor: color + '1A', color, border: `1px solid ${color}40` }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-                          {c.category}
+
+        {filtered.length === 0 ? (
+          <div className="p-10 text-center text-sm text-[var(--color-ink-3)]">Nenhum lançamento com estes filtros.</div>
+        ) : (
+          <div className="pb-1">
+            {monthGroups.map(([monthKey, items]) => (
+              <div key={monthKey}>
+                {/* Divisor do mês */}
+                <div className="flex items-baseline gap-2 px-4 sm:px-6 pt-5 pb-1">
+                  <span className="text-[13px] font-bold text-[var(--color-ink)]">{monthLabel(monthKey)}</span>
+                  <div className="flex-1 self-center h-px bg-[var(--color-ink)]/8" />
+                </div>
+                <ul>
+                  {items.map(c => {
+                    const acc = bankAccounts.find(a => a.id === c.account_id);
+                    const isIncome = c.type === 'Income';
+                    const isSelected = selected.has(c.id);
+                    const metaText = [c.category, acc?.name].filter(Boolean).join(' · ');
+                    return (
+                      <li key={c.id} onClick={() => onEditCashFlow(c)} title="Editar lançamento"
+                        className={`group flex items-center gap-3 px-4 sm:px-6 py-3 transition-colors cursor-pointer ${isSelected ? 'bg-[var(--color-primary-50)]/50' : 'hover:bg-white/50'}`}>
+                        <input type="checkbox" checked={isSelected}
+                          onClick={e => e.stopPropagation()} onChange={() => toggleOne(c.id)}
+                          className="w-4 h-4 rounded accent-[#C13584] cursor-pointer flex-shrink-0" />
+                        <span className="w-10 text-[11.5px] text-[var(--color-ink-3)] font-medium flex-shrink-0">
+                          {new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                         </span>
-                      </td>
-                      <td className="p-3">
-                        {(() => {
-                          const acc = bankAccounts.find(a => a.id === c.account_id);
-                          return acc ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-ink-2)] whitespace-nowrap">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
-                              {acc.name}
-                            </span>
-                          ) : <span className="text-[var(--color-ink-3)] text-xs">—</span>;
-                        })()}
-                      </td>
-                      <td className="p-3">
-                        {c.type === 'Income'
-                          ? <span className="badge badge-success">Receita</span>
-                          : <span className="badge badge-danger">Despesa</span>}
-                      </td>
-                      <td className={`p-3 text-right font-semibold whitespace-nowrap ${c.type === 'Income' ? 'text-green-600' : 'text-red-500'}`}>
-                        {c.type === 'Income' ? '+' : '-'} R$ {fmtBRL(Number(c.value))}
-                      </td>
-                      <td className="p-3 text-center">
-                        {c.status === 'Paid'
-                          ? <span className="badge badge-success">Pago</span>
-                          : <span className="badge badge-warning">Pendente</span>}
-                      </td>
-                      <td className="p-3 pr-4 text-right">
-                        <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
-                          <button onClick={() => onEditCashFlow(c)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
-                            <Edit2 size={15} />
-                          </button>
-                          <button onClick={() => handleSingleDelete(c)} disabled={isDeleting === c.id} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
+                        <CashStatusIcon c={c} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[var(--color-ink)] truncate">{c.description || c.category}</p>
+                          <p className="truncate mt-0.5 text-[11.5px] text-[var(--color-ink-3)]">{metaText}</p>
+                        </div>
+                        {/* Largura/altura fixas para o valor alinhar igual em todas as linhas */}
+                        <div className="flex flex-col items-end flex-shrink-0 gap-1">
+                          <span className={`text-sm font-semibold whitespace-nowrap ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
+                            {isIncome ? '+' : '−'} R$ {fmtBRL(Number(c.value))}
+                          </span>
+                          <span onClick={e => e.stopPropagation()} className="flex items-center justify-end h-4 min-w-4">
+                            <PaymentSlot c={c} />
+                          </span>
+                        </div>
+                        <div onClick={e => e.stopPropagation()}
+                          className="flex items-center justify-end w-[64px] flex-shrink-0 text-[var(--color-ink-3)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          {c.status === 'Pending' && (
+                            <button onClick={() => markPaid(c)} disabled={payingId === c.id} title="Marcar como pago"
+                              className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors cursor-pointer disabled:opacity-50">
+                              {payingId === c.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                            </button>
+                          )}
+                          <button onClick={() => handleSingleDelete(c)} disabled={isDeleting === c.id} title="Excluir"
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer">
                             {isDeleting === c.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2106,9 +2082,8 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCa
 // -------------------------------------------------------------
 // CASHFLOW VIEW
 // -------------------------------------------------------------
-function CashFlowView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashFlow, refetch }: {
+function CashFlowView({ cashFlows, bankAccounts, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
-  cashFlowCategories: CashFlowCategoryRecord[];
   bankAccounts: BankAccount[];
   onEditCashFlow: (c: CashFlow) => void;
   refetch: () => void;
@@ -2116,6 +2091,8 @@ function CashFlowView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashF
   const [currentDate, setCurrentDate] = useState(new Date());
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [genId, setGenId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [quickFilter, setQuickFilter] = useState<'all' | 'income' | 'expense' | 'pending' | 'overdue'>('all');
 
   const handleDelete = async (c: CashFlow) => {
     // Parcela não paga com boleto: cancela no Asaas antes de apagar, senão o
@@ -2172,156 +2149,197 @@ function CashFlowView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashF
     setCurrentDate(new Date());
   };
 
-  const filteredCashFlows = cashFlows.filter(c => {
+  const today = new Date().toISOString().split('T')[0];
+  const isOverdue = (c: CashFlow) => c.status === 'Pending' && c.date < today;
+
+  const monthCashFlows = cashFlows.filter(c => {
     const d = new Date(c.date + 'T00:00:00'); // Parse as local timezone to avoid UTC shift
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
+  // Filtro rápido aplicado sobre o mês exibido.
+  const filteredCashFlows = monthCashFlows.filter(c => {
+    if (quickFilter === 'income') return c.type === 'Income';
+    if (quickFilter === 'expense') return c.type === 'Expense';
+    if (quickFilter === 'pending') return c.status === 'Pending';
+    if (quickFilter === 'overdue') return isOverdue(c);
+    return true;
+  });
+
+  // Extrato: dias em ordem cronológica, lançamentos agrupados por dia.
+  const dayGroups = (() => {
+    const map = new Map<string, CashFlow[]>();
+    for (const c of [...filteredCashFlows].sort((a, b) => a.date.localeCompare(b.date))) {
+      const list = map.get(c.date) || [];
+      list.push(c);
+      map.set(c.date, list);
+    }
+    return [...map.entries()];
+  })();
+
   const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   const monthName = monthNames[currentMonth];
 
-  // Calculate totals for the viewed month
-  const totalIncome = filteredCashFlows.filter(c => c.type === 'Income').reduce((acc, curr) => acc + curr.value, 0);
-  const totalExpense = filteredCashFlows.filter(c => c.type === 'Expense').reduce((acc, curr) => acc + curr.value, 0);
-  const balance = totalIncome - totalExpense;
+  // Totais do mês, separando realizado (Pago) do previsto (Pendente).
+  const sum = (arr: CashFlow[]) => arr.reduce((acc, c) => acc + (Number(c.value) || 0), 0);
+  const incomePaid = sum(monthCashFlows.filter(c => c.type === 'Income' && c.status === 'Paid'));
+  const incomePending = sum(monthCashFlows.filter(c => c.type === 'Income' && c.status === 'Pending'));
+  const expensePaid = sum(monthCashFlows.filter(c => c.type === 'Expense' && c.status === 'Paid'));
+  const expensePending = sum(monthCashFlows.filter(c => c.type === 'Expense' && c.status === 'Pending'));
+  const totalIncome = incomePaid + incomePending;
+  const totalExpense = expensePaid + expensePending;
+  const overdueMonth = monthCashFlows.filter(isOverdue);
 
   const fmtBRL = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const markPaid = async (c: CashFlow) => {
+    setPayingId(c.id);
+    const { error } = await supabase.from('cash_flow').update({ status: 'Paid' }).eq('id', c.id);
+    if (error) alert(`Não foi possível marcar como pago: ${error.message}`);
+    await refetch();
+    setPayingId(null);
+  };
+
+  const FILTERS = [
+    ['all', 'Tudo'], ['income', 'Receitas'], ['expense', 'Despesas'], ['pending', 'Pendentes'], ['overdue', 'Vencidos'],
+  ] as const;
+
+  const previsto = totalIncome - totalExpense;
+
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Navigation Header */}
-      <div className="glass-panel p-4 flex justify-between items-center">
-        <h3 className="font-semibold text-lg text-[var(--color-ink)]">Fluxo de Caixa</h3>
-        <div className="flex items-center gap-4">
-          <button onClick={handleCurrentMonth} className="btn-secondary text-xs px-4 py-1.5">
-            Mês Atual
-          </button>
-          <div className="flex items-center gap-2 bg-white/60 border border-white/80 rounded-xl p-1 shadow-sm">
-            <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer">
-              <ChevronLeft size={18} />
-            </button>
-            <span className="font-semibold text-sm w-32 text-center text-[var(--color-ink-2)]">
-              {monthName} {currentYear}
-            </span>
-            <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer">
-              <ChevronRight size={18} />
-            </button>
+    <div className="flex flex-col gap-5 w-full max-w-5xl [font-variant-numeric:tabular-nums]">
+      {/* Painel do mês: navegação + resumo em 3 colunas */}
+      <div className="glass-panel overflow-hidden">
+        <div className="flex items-center gap-3 px-5 sm:px-6 pt-5 pb-4">
+          <h3 className="text-xl font-bold tracking-tight text-[var(--color-ink)]">
+            {monthName} <span className="font-normal text-[var(--color-ink-3)]">{currentYear}</span>
+          </h3>
+          <div className="ml-auto flex items-center gap-2">
+            {!(currentMonth === new Date().getMonth() && currentYear === new Date().getFullYear()) && (
+              <button onClick={handleCurrentMonth} className="btn-secondary text-xs px-3 py-1.5">Hoje</button>
+            )}
+            <div className="flex items-center bg-white/60 border border-white/80 rounded-xl p-0.5 shadow-sm">
+              <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Mês anterior">
+                <ChevronLeft size={17} />
+              </button>
+              <button onClick={handleNextMonth} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Próximo mês">
+                <ChevronRight size={17} />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 divide-x divide-white/50 border-t border-white/50 bg-white/20">
+          <div className="px-4 sm:px-6 py-4">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-3)] mb-1">Receitas</p>
+            <p className="text-base sm:text-2xl font-bold tracking-tight text-emerald-600 truncate">R$ {fmtBRL(totalIncome)}</p>
+            <div className="mt-2 h-1 rounded-full bg-emerald-500/15 overflow-hidden">
+              <div className="h-full rounded-full bg-emerald-500" style={{ width: `${totalIncome > 0 ? (incomePaid / totalIncome) * 100 : 0}%` }} />
+            </div>
+            <p className="hidden sm:block text-xs text-[var(--color-ink-3)] mt-1.5">Recebido R$ {fmtBRL(incomePaid)} · A receber R$ {fmtBRL(incomePending)}</p>
+            <p className="sm:hidden text-[10px] text-[var(--color-ink-3)] mt-1">Recebido {Math.round(totalIncome > 0 ? (incomePaid / totalIncome) * 100 : 0)}%</p>
+          </div>
+          <div className="px-4 sm:px-6 py-4">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-3)] mb-1">Despesas</p>
+            <p className="text-base sm:text-2xl font-bold tracking-tight text-rose-600 truncate">R$ {fmtBRL(totalExpense)}</p>
+            <div className="mt-2 h-1 rounded-full bg-rose-500/15 overflow-hidden">
+              <div className="h-full rounded-full bg-rose-500" style={{ width: `${totalExpense > 0 ? (expensePaid / totalExpense) * 100 : 0}%` }} />
+            </div>
+            <p className="hidden sm:block text-xs text-[var(--color-ink-3)] mt-1.5">Pago R$ {fmtBRL(expensePaid)} · A pagar R$ {fmtBRL(expensePending)}</p>
+            <p className="sm:hidden text-[10px] text-[var(--color-ink-3)] mt-1">Pago {Math.round(totalExpense > 0 ? (expensePaid / totalExpense) * 100 : 0)}%</p>
+          </div>
+          <div className="px-4 sm:px-6 py-4">
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-3)] mb-1">Resultado previsto</p>
+            <p className={`text-base sm:text-2xl font-bold tracking-tight truncate ${previsto >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>R$ {fmtBRL(previsto)}</p>
+            <p className="hidden sm:block text-xs text-[var(--color-ink-3)] mt-[18px]">Realizado até agora: <span className={`font-semibold ${incomePaid - expensePaid >= 0 ? 'text-[var(--color-ink-2)]' : 'text-rose-600'}`}>R$ {fmtBRL(incomePaid - expensePaid)}</span></p>
+            <p className="sm:hidden text-[10px] text-[var(--color-ink-3)] mt-1">Realizado R$ {fmtBRL(incomePaid - expensePaid)}</p>
           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="glass-card p-5">
-          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Receitas do Mês</p>
-          <p className="text-2xl font-bold text-green-600">R$ {fmtBRL(totalIncome)}</p>
-        </div>
-        <div className="glass-card p-5">
-          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Despesas do Mês</p>
-          <p className="text-2xl font-bold text-red-500">R$ {fmtBRL(totalExpense)}</p>
-        </div>
-        <div className="glass-card p-5">
-          <p className="text-[var(--color-ink-3)] text-xs font-medium uppercase tracking-wider mb-1">Saldo do Mês</p>
-          <p className={`text-2xl font-bold ${balance >= 0 ? 'text-[#C13584]' : 'text-red-600'}`}>R$ {fmtBRL(balance)}</p>
-        </div>
-      </div>
-
-      {/* Table */}
+      {/* Extrato do mês */}
       <div className="glass-panel overflow-hidden">
-        <div className="overflow-x-auto"><table className="w-full text-left border-collapse min-w-[720px]">
-          <thead>
-            <tr className="bg-white/40 border-b border-white/60 text-[11px] uppercase tracking-wider text-[var(--color-ink-3)]">
-              <th className="p-4 pl-6 font-medium">Data</th>
-              <th className="p-4 font-medium">Descrição</th>
-              <th className="p-4 font-medium">Categoria</th>
-              <th className="p-4 font-medium">Valor</th>
-              <th className="p-4 font-medium text-right">Status</th>
-              <th className="p-4 font-medium text-center">Boleto</th>
-              <th className="p-4 pr-6 font-medium text-right">Ação</th>
-            </tr>
-          </thead>
-          <tbody className="text-sm">
-            {filteredCashFlows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-8 text-center text-[var(--color-ink-3)]">Nenhum lançamento no fluxo de caixa para este mês.</td>
-              </tr>
-            ) : (
-              filteredCashFlows.map(c => (
-                <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
-                  <td className="p-4 pl-6 text-[var(--color-ink-3)] font-medium whitespace-nowrap">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                  <td className="p-4 font-medium text-[var(--color-ink)]">
-                    {c.description || '-'}
-                    {(() => {
-                      const acc = bankAccounts.find(a => a.id === c.account_id);
-                      return acc ? (
-                        <span className="block text-[11px] font-normal text-[var(--color-ink-3)] mt-0.5 inline-flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: acc.color }} />
-                          {acc.name}
-                        </span>
-                      ) : null;
-                    })()}
-                  </td>
-                  <td className="p-4">
-                    {(() => {
-                      const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
-                      const color = catRecord?.color || '#6B7280';
-                      return (
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold shadow-sm inline-flex items-center gap-1.5"
-                          style={{ backgroundColor: color + '1A', color, border: `1px solid ${color}40` }}>
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-                          {c.category}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className={`p-4 font-semibold whitespace-nowrap ${c.type === 'Income' ? 'text-green-600' : 'text-red-500'}`}>
-                    {c.type === 'Income' ? '+' : '-'} R$ {fmtBRL(Number(c.value))}
-                  </td>
-                  <td className="p-4 text-right">
-                    {c.status === 'Paid' ? (
-                      <span className="badge badge-success">Pago</span>
-                    ) : (
-                      <span className="badge badge-warning">Pendente</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-center">
-                    {c.boleto_url ? (
-                      <a href={c.boleto_url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700 transition-colors"
-                        title="Abrir boleto">
-                        <Barcode size={15} /> Ver <ExternalLink size={12} />
-                      </a>
-                    ) : (c.payment_method && c.payment_method !== 'Boleto') ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-gray-100 text-[var(--color-ink-2)]">
-                        {c.payment_method}
-                      </span>
-                    ) : (c.type === 'Income' && c.proposal_id) ? (
-                      <button onClick={() => handleGenerateBoleto(c)} disabled={genId === c.id}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-ink-3)] hover:text-sky-600 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Gerar boleto no Asaas">
-                        {genId === c.id ? <Loader2 size={14} className="animate-spin" /> : <Barcode size={15} />}
-                        Gerar
-                      </button>
-                    ) : (
-                      <span className="text-[var(--color-ink-3)] text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="p-4 pr-6 text-right">
-                    <div className="flex items-center justify-end gap-3 text-[var(--color-ink-3)]">
-                      <button onClick={() => onEditCashFlow(c)} className="hover:text-[#C13584] transition-colors cursor-pointer" title="Editar">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => handleDelete(c)} disabled={isDeleting === c.id} className="hover:text-red-500 transition-colors cursor-pointer" title="Excluir">
-                        {isDeleting === c.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {/* Filtros do extrato (rolagem horizontal no mobile) */}
+        <div className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 border-b border-white/50 bg-white/25 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {FILTERS.map(([key, label]) => (
+            <button key={key} onClick={() => setQuickFilter(key)}
+              className={`px-3 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-all cursor-pointer flex-shrink-0 ${quickFilter === key
+                ? key === 'overdue' ? 'bg-rose-500 text-white shadow-sm' : 'bg-[var(--color-ink)] text-white shadow-sm'
+                : 'text-[var(--color-ink-3)] hover:bg-white/70 hover:text-[var(--color-ink)]'}`}>
+              {label}{key === 'overdue' && overdueMonth.length > 0 ? ` · ${overdueMonth.length}` : ''}
+            </button>
+          ))}
+          <span className="ml-auto hidden sm:block text-xs text-[var(--color-ink-3)] flex-shrink-0 pl-3">
+            {filteredCashFlows.length} lançamento{filteredCashFlows.length !== 1 ? 's' : ''}
+          </span>
         </div>
+
+        {dayGroups.length === 0 ? (
+          <div className="p-10 text-center text-sm text-[var(--color-ink-3)]">
+            {monthCashFlows.length === 0
+              ? `Nenhum lançamento em ${monthName}. Use "Novo Registro" para adicionar receitas e despesas.`
+              : 'Nada por aqui com este filtro.'}
+          </div>
+        ) : (
+          <div className="pb-1">
+            {dayGroups.map(([date, items]) => {
+              const d = new Date(date + 'T12:00:00');
+              const isToday = date === today;
+              const weekday = d.toLocaleDateString('pt-BR', { weekday: 'long' }).split(',')[0];
+              return (
+                <div key={date}>
+                  {/* Divisor do dia */}
+                  <div className="flex items-baseline gap-2 px-4 sm:px-6 pt-5 pb-1">
+                    <span className={`text-[13px] font-bold ${isToday ? 'text-[var(--color-primary)]' : 'text-[var(--color-ink)]'}`}>
+                      {String(d.getDate()).padStart(2, '0')}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-ink-3)]">{weekday}{isToday ? ' · hoje' : ''}</span>
+                    <div className="flex-1 self-center h-px bg-[var(--color-ink)]/8" />
+                  </div>
+                  {/* Lançamentos do dia — linha inteira clica para editar */}
+                  <ul>
+                    {items.map(c => {
+                      const acc = bankAccounts.find(a => a.id === c.account_id);
+                      const isIncome = c.type === 'Income';
+                      const metaText = [c.category, acc?.name].filter(Boolean).join(' · ');
+                      return (
+                        <li key={c.id} onClick={() => onEditCashFlow(c)} title="Editar lançamento"
+                          className="group flex items-center gap-3 px-4 sm:px-6 py-3 hover:bg-white/50 transition-colors cursor-pointer">
+                          <CashStatusIcon c={c} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[var(--color-ink)] truncate">{c.description || c.category}</p>
+                            <p className="truncate mt-0.5 text-[11.5px] text-[var(--color-ink-3)]">{metaText}</p>
+                          </div>
+                          {/* Largura/altura fixas para o valor alinhar igual em todas as linhas */}
+                          <div className="flex flex-col items-end flex-shrink-0 gap-1">
+                            <span className={`text-sm font-semibold whitespace-nowrap ${isIncome ? 'text-emerald-700' : 'text-rose-600'}`}>
+                              {isIncome ? '+' : '−'} R$ {fmtBRL(Number(c.value))}
+                            </span>
+                            <span onClick={e => e.stopPropagation()} className="flex items-center justify-end h-4 min-w-4">
+                              <PaymentSlot c={c} genBusy={genId === c.id} onGenerate={handleGenerateBoleto} />
+                            </span>
+                          </div>
+                          <div onClick={e => e.stopPropagation()}
+                            className="flex items-center justify-end w-[64px] flex-shrink-0 text-[var(--color-ink-3)] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                            {c.status === 'Pending' && (
+                              <button onClick={() => markPaid(c)} disabled={payingId === c.id} title="Marcar como pago"
+                                className="p-1.5 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors cursor-pointer disabled:opacity-50">
+                                {payingId === c.id ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} />}
+                              </button>
+                            )}
+                            <button onClick={() => handleDelete(c)} disabled={isDeleting === c.id} title="Excluir"
+                              className="p-1.5 rounded-lg hover:bg-rose-500/10 hover:text-rose-500 transition-colors cursor-pointer">
+                              {isDeleting === c.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3351,31 +3369,36 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 // -------------------------------------------------------------
 // CASHFLOW FORM VIEW
 // -------------------------------------------------------------
-function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, suppliers, onSave, onCancel }: {
+function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, suppliers, defaultType, onSave, onCancel }: {
   cashFlowData: CashFlow | null;
   cashFlowCategories: CashFlowCategoryRecord[];
   bankAccounts: BankAccount[];
   suppliers: Supplier[];
+  defaultType?: CashFlowType;
   onSave: () => void;
   onCancel: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
   const isEditing = !!cashFlowData;
-  const [type, setType] = useState<CashFlowType>(cashFlowData?.type || 'Income');
+  const [type, setType] = useState<CashFlowType>(cashFlowData?.type || defaultType || 'Income');
   // Contas ativas + a conta do lançamento mesmo se arquivada (para não sumir na edição).
   const selectableAccounts = bankAccounts.filter(a => a.active || a.id === cashFlowData?.account_id);
   const [accountId, setAccountId] = useState<string>(
     cashFlowData?.account_id || bankAccounts.find(a => a.is_default && a.active)?.id || ''
   );
   const [supplierId, setSupplierId] = useState<string>(cashFlowData?.supplier_id || '');
+  // Novo lançamento marcado como recorrente (receita OU despesa): cria também
+  // o cadastro em recurring_expenses (dia de vencimento = dia da data
+  // escolhida) e os próximos meses passam a ser gerados automaticamente.
+  const [isRecurring, setIsRecurring] = useState(false);
 
   // Default category: existing value, or first matching category from DB, or empty string
   const getDefaultCategory = (t: CashFlowType) => {
     if (cashFlowData?.category) return cashFlowData.category;
     return cashFlowCategories.find(c => c.type === t)?.name || '';
   };
-  const [category, setCategory] = useState<string>(getDefaultCategory(cashFlowData?.type || 'Income'));
+  const [category, setCategory] = useState<string>(getDefaultCategory(cashFlowData?.type || defaultType || 'Income'));
   const [description, setDescription] = useState(cashFlowData?.description || '');
   const [value, setValue] = useState(cashFlowData?.value?.toString() || '');
   const [date, setDate] = useState(cashFlowData?.date ? new Date(cashFlowData.date + 'T12:00:00').toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
@@ -3397,7 +3420,7 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, supp
     try {
       const numericValue = parseFloat(value.replace(',', '.'));
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         type, category, description, value: numericValue, date, status,
         account_id: accountId || null,
         supplier_id: type === 'Expense' ? (supplierId || null) : null,
@@ -3407,6 +3430,28 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, supp
         const { error } = await supabase.from('cash_flow').update(payload).eq('id', cashFlowData.id);
         if (error) throw error;
       } else {
+        // Lançamento recorrente: cria o cadastro da recorrência e vincula este
+        // lançamento a ela (competence = mês da data). Os meses seguintes são
+        // gerados automaticamente pela função generate_recurring_expenses.
+        if (isRecurring) {
+          const { data: rec, error: recErr } = await supabase
+            .from('recurring_expenses')
+            .insert({
+              description,
+              value: numericValue,
+              category,
+              type,
+              account_id: accountId || null,
+              supplier_id: type === 'Expense' ? (supplierId || null) : null,
+              due_day: Number(date.slice(8, 10)),
+              start_date: date,
+            })
+            .select('id')
+            .single();
+          if (recErr) throw recErr;
+          payload.recurring_expense_id = rec.id;
+          payload.competence = date.slice(0, 7);
+        }
         const { error } = await supabase.from('cash_flow').insert(payload);
         if (error) throw error;
       }
@@ -3536,6 +3581,24 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, supp
               </div>
             )}
           </div>
+          {!isEditing && (
+            <label className="flex items-start gap-3 p-4 rounded-xl bg-white/60 border border-white/60 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={e => setIsRecurring(e.target.checked)}
+                className="w-5 h-5 accent-[#C13584] cursor-pointer mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-[var(--color-ink-2)]">
+                  {type === 'Income' ? 'Receita recorrente (repete todo mês)' : 'Despesa recorrente (repete todo mês)'}
+                </span>
+                <span className="block text-xs text-[var(--color-ink-3)] mt-0.5">
+                  Todo dia {date ? Number(date.slice(8, 10)) : '—'} será lançada como pendente automaticamente. Gerencie em Financeiro → Recorrentes.
+                </span>
+              </span>
+            </label>
+          )}
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
             <button type="button" onClick={onCancel} className="btn-secondary">
               Cancelar
