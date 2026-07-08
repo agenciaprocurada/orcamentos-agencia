@@ -34,6 +34,20 @@
   --z-toast: 70;
 }
 
+/* Áreas seguras (barra de status/notch). Em navegador comum, env() = 0. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* PWA instalado no iOS (classe aplicada no main.tsx via navigator.standalone):
+   garante um respiro mínimo sob o relógio/Dynamic Island mesmo quando o iOS
+   reporta env() = 0. O max() usa o valor real do aparelho quando disponível. */
+:root.ios-pwa {
+  --safe-top: max(env(safe-area-inset-top, 0px), 59px);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 24px);
+}
+
 @layer base {
   :root {
     --background: var(--color-canvas);
