@@ -10,7 +10,7 @@
 // com hash (JS/CSS) e os dados (Supabase) NÃO são cacheados — vêm sempre da
 // rede, então nunca serve versão velha.
 
-const SHELL = 'procurada-shell-v2';
+const SHELL = 'procurada-shell-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -33,12 +33,21 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Só intercepta navegação: rede primeiro, cai no shell em cache se offline.
+// Só intercepta navegação: rede primeiro (e atualiza a cópia offline a cada
+// sucesso — o shell nunca fica velho), cai no cache só se estiver offline.
 // Demais requisições (assets, API) passam direto sem cache.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('/')));
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(SHELL).then((c) => c.put('/', copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match('/')),
+    );
   }
 });
 
