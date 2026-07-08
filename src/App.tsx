@@ -221,7 +221,7 @@ function App() {
           />
         )}
         {/* Sidebar — refined glass, grouped navigation. Gaveta off-canvas no mobile, fixa no desktop (lg+). */}
-        <aside className={`fixed lg:static inset-y-0 left-0 z-[50] w-64 max-w-[82vw] bg-white/85 lg:bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 pt-[calc(1.5rem+var(--safe-top))] pb-[calc(1.5rem+var(--safe-bottom))] flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden transition-transform duration-300 ease-out lg:transition-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <aside className={`fixed lg:static inset-y-0 left-0 z-[50] w-64 max-w-[82vw] bg-white/85 lg:bg-white/55 backdrop-blur-2xl border-r border-white/70 px-4 pt-[calc(1.5rem+30px+var(--safe-top))] lg:pt-[calc(1.5rem+var(--safe-top))] pb-[calc(1.5rem+var(--safe-bottom))] flex flex-col gap-7 flex-shrink-0 shadow-[1px_0_30px_-12px_rgba(27,20,32,0.10)] print:hidden transition-transform duration-300 ease-out lg:transition-none lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center gap-3 px-2">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#C13584] to-violet-600 shadow-[0_4px_12px_-2px_rgba(193,53,132,0.5)] flex items-center justify-center">
               <span className="text-white font-bold text-lg leading-none">O</span>
@@ -311,8 +311,8 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto flex flex-col h-full print:overflow-visible">
-          {/* --safe-top: no PWA do iOS o conteúdo passa por baixo da barra de status; a variável (index.css) empurra o header para a área visível */}
-          <header className="h-[calc(68px+var(--safe-top))] pt-[var(--safe-top)] flex-shrink-0 border-b glass-raised flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-[20] print:hidden">
+          {/* Mobile: +30px fixos no topo (pedido: independe de ser iPhone) somados à safe area; desktop (lg+) sem o extra */}
+          <header className="h-[calc(98px+var(--safe-top))] pt-[calc(30px+var(--safe-top))] lg:h-[calc(68px+var(--safe-top))] lg:pt-[var(--safe-top)] flex-shrink-0 border-b glass-raised flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-[20] print:hidden">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
