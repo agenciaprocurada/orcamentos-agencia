@@ -44,12 +44,20 @@ import { LeadsView } from './components/LeadsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
 import { AsaasSettingsView } from './components/AsaasSettingsView';
+import { FinanceAccountsView } from './components/FinanceAccountsView';
+import { TransfersView } from './components/TransfersView';
+import { RecurringExpensesView } from './components/RecurringExpensesView';
+import { SuppliersView } from './components/SuppliersView';
+import { FinanceReportsView } from './components/FinanceReportsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
-import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection, Contract, ContractTemplate, SignerField, AgencySettings } from './types/database';
+import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlowCategory, CashFlowStatus, Service, ProposalPhase, CashFlowCategoryRecord, SectionTemplate, AdditionalSection, Contract, ContractTemplate, SignerField, AgencySettings, BankAccount, Supplier } from './types/database';
 import type { User } from '@supabase/supabase-js';
 
+// Abas agrupadas sob o item "Financeiro" da sidebar.
+const FINANCE_TABS: string[] = ['cashflow', 'cashflow-all', 'cashflow-categories', 'cashflow-form', 'finance-accounts', 'finance-transfers', 'finance-recurring', 'finance-suppliers', 'finance-reports'];
+
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedSectionTemplate, setSelectedSectionTemplate] = useState<SectionTemplate | null>(null);
@@ -100,7 +108,7 @@ function App() {
     return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch, silentRefetch } = useSupabase();
 
   // Loads once per signed-in user. The ref guards against duplicated effect
   // runs (React StrictMode) re-triggering the full load and re-showing the spinner.
@@ -109,8 +117,12 @@ function App() {
     if (user?.id && loadedForUser.current !== user.id) {
       loadedForUser.current = user.id;
       refetch();
+      // Gera as despesas recorrentes do mês (idempotente no banco: rodar de
+      // novo não duplica). Silencioso: se a RPC ainda não existir, ignora.
+      supabase.rpc('generate_recurring_expenses')
+        .then(({ data }) => { if (Number(data) > 0) silentRefetch(); });
     }
-  }, [refetch, user?.id]);
+  }, [refetch, silentRefetch, user?.id]);
 
   // Public contract signing page: /assinar/<token> — bypasses admin auth.
   const signMatch = window.location.pathname.match(/^\/assinar\/([^/?#]+)/);
@@ -172,10 +184,19 @@ function App() {
               <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
               <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
               <NavButton icon={<ListTodo size={18} />} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
-              <NavButton icon={<DollarSign size={18} />} label="Fluxo de Caixa" active={['cashflow', 'cashflow-categories', 'cashflow-all', 'cashflow-form'].includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
-              {(activeTab === 'cashflow' || activeTab === 'cashflow-categories' || activeTab === 'cashflow-all' || activeTab === 'cashflow-form') && (
+              <NavButton icon={<DollarSign size={18} />} label="Financeiro" active={FINANCE_TABS.includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
+              {FINANCE_TABS.includes(activeTab) && (
                 <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-[var(--color-primary)]/20 pl-3">
-                  {([['cashflow', 'Por Mês'], ['cashflow-all', 'Todos os Lançamentos'], ['cashflow-categories', 'Categorias']] as const).map(([tab, label]) => {
+                  {([
+                    ['cashflow', 'Por Mês'],
+                    ['cashflow-all', 'Todos os Lançamentos'],
+                    ['finance-accounts', 'Contas'],
+                    ['finance-transfers', 'Transferências'],
+                    ['finance-recurring', 'Recorrentes'],
+                    ['finance-suppliers', 'Fornecedores'],
+                    ['finance-reports', 'Relatórios'],
+                    ['cashflow-categories', 'Categorias'],
+                  ] as const).map(([tab, label]) => {
                     const on = activeTab === tab || (tab === 'cashflow' && activeTab === 'cashflow-form');
                     return (
                       <button key={tab} onClick={() => setActiveTab(tab)} className={`text-left text-[13px] px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${on ? 'text-[var(--color-primary)] bg-[var(--color-primary-50)]' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink)] hover:bg-white/50'}`}>
@@ -234,9 +255,14 @@ function App() {
                     activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
                       activeTab === 'services' ? 'Serviços Base' :
                         activeTab === 'service-form' ? (selectedService ? 'Editar Serviço' : 'Novo Serviço') :
-                          activeTab === 'cashflow' ? 'Fluxo de Caixa — Por Mês' :
+                          activeTab === 'cashflow' ? 'Financeiro — Por Mês' :
                             activeTab === 'cashflow-all' ? 'Todos os Lançamentos' :
-                              activeTab === 'cashflow-categories' ? 'Categorias do Fluxo de Caixa' :
+                              activeTab === 'cashflow-categories' ? 'Categorias Financeiras' :
+                                activeTab === 'finance-accounts' ? 'Contas Bancárias' :
+                                activeTab === 'finance-transfers' ? 'Transferências entre Contas' :
+                                activeTab === 'finance-recurring' ? 'Despesas Recorrentes' :
+                                activeTab === 'finance-suppliers' ? 'Fornecedores' :
+                                activeTab === 'finance-reports' ? 'Relatórios (DRE)' :
                                 activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
                                   activeTab === 'clients' ? 'Clientes' :
                                     activeTab === 'client-form' ? (selectedClient ? 'Editar Cliente' : 'Novo Cliente') :
@@ -355,13 +381,20 @@ function App() {
                     }}
                   />
                 )}
-                {activeTab === 'cashflow' && <CashFlowView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
-                {activeTab === 'cashflow-all' && <CashFlowAllView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
+                {activeTab === 'cashflow' && <CashFlowView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
+                {activeTab === 'cashflow-all' && <CashFlowAllView cashFlows={cashFlows} cashFlowCategories={cashFlowCategories} bankAccounts={bankAccounts} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
                 {activeTab === 'cashflow-categories' && <CashFlowCategoriesView categories={cashFlowCategories} refetch={refetch} />}
+                {activeTab === 'finance-accounts' && <FinanceAccountsView accounts={bankAccounts} cashFlows={cashFlows} transfers={accountTransfers} refetch={silentRefetch} />}
+                {activeTab === 'finance-transfers' && <TransfersView accounts={bankAccounts} transfers={accountTransfers} refetch={silentRefetch} />}
+                {activeTab === 'finance-recurring' && <RecurringExpensesView recurring={recurringExpenses} accounts={bankAccounts} suppliers={suppliers} categories={cashFlowCategories} refetch={silentRefetch} />}
+                {activeTab === 'finance-suppliers' && <SuppliersView suppliers={suppliers} cashFlows={cashFlows} refetch={silentRefetch} />}
+                {activeTab === 'finance-reports' && <FinanceReportsView cashFlows={cashFlows} categories={cashFlowCategories} accounts={bankAccounts} transfers={accountTransfers} />}
                 {activeTab === 'cashflow-form' && (
                   <CashFlowFormView
                     cashFlowData={selectedCashFlow}
                     cashFlowCategories={cashFlowCategories}
+                    bankAccounts={bankAccounts}
+                    suppliers={suppliers}
                     onSave={() => { setActiveTab('cashflow'); refetch(); }}
                     onCancel={() => setActiveTab('cashflow')}
                   />
@@ -467,6 +500,7 @@ function App() {
       {approvalTarget && (
         <ApprovalModal
           target={approvalTarget}
+          bankAccounts={bankAccounts}
           onClose={() => setApprovalTarget(null)}
           onDone={() => { setApprovalTarget(null); refetch(); }}
         />
@@ -865,8 +899,9 @@ type ProposalData = { proposal: Proposal; client: Client | null };
 // contrário usa `method` (forma de pagamento manual).
 type InstallmentRow = { date: string; value: number; boleto: boolean; method: string };
 
-function ApprovalModal({ target, onClose, onDone }: {
+function ApprovalModal({ target, bankAccounts, onClose, onDone }: {
   target: ProposalData;
+  bankAccounts: BankAccount[];
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -889,6 +924,13 @@ function ApprovalModal({ target, onClose, onDone }: {
   const existingDoc = target.client?.cnpj || target.client?.cpf || '';
   const [docNumber, setDocNumber] = useState(existingDoc);
   const [genBoletos, setGenBoletos] = useState(true);
+  // Contas: boletos caem na conta Asaas (o trigger do banco garante mesmo se
+  // esta lista estiver vazia); parcelas manuais vão para a conta escolhida.
+  const activeAccounts = bankAccounts.filter(a => a.active && a.system_key !== 'asaas');
+  const asaasAccountId = bankAccounts.find(a => a.system_key === 'asaas')?.id ?? null;
+  const [manualAccountId, setManualAccountId] = useState<string>(
+    activeAccounts.find(a => a.is_default)?.id || activeAccounts[0]?.id || ''
+  );
   // Aprovação concluída mas boletos falharam: rows já foram lançadas, então o
   // fechamento precisa atualizar a lista (onDone), não descartar (onClose).
   const [approvedPartial, setApprovedPartial] = useState(false);
@@ -970,6 +1012,7 @@ function ApprovalModal({ target, onClose, onDone }: {
         proposal_id: target.proposal.id,
         installment_number: i + 1,
         payment_method: isBoletoRow(inst) ? 'Boleto' : inst.method,
+        account_id: isBoletoRow(inst) ? asaasAccountId : (manualAccountId || null),
       }));
       const { error: cfErr } = await supabase.from('cash_flow').insert(rows);
       if (cfErr) throw cfErr;
@@ -1054,6 +1097,16 @@ function ApprovalModal({ target, onClose, onDone }: {
           </div>
           {anyBoleto && !docNumber.trim() && (
             <p className="text-xs text-orange-500 mt-1">Informe o CPF/CNPJ do pagador para o boleto ser aceito pelo Asaas.</p>
+          )}
+          {installments.some(inst => !isBoletoRow(inst)) && activeAccounts.length > 0 && (
+            <div className="mt-3">
+              <label className="text-xs font-semibold text-[var(--color-ink-3)] uppercase tracking-wider">Conta de recebimento (parcelas sem boleto)</label>
+              <select value={manualAccountId} onChange={e => setManualAccountId(e.target.value)}
+                className="mt-1 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                {activeAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <p className="text-[11px] text-[var(--color-ink-3)] mt-1">Parcelas com boleto entram automaticamente na conta Asaas.</p>
+            </div>
           )}
         </div>
 
@@ -1790,9 +1843,10 @@ function CashFlowCategoriesView({ categories, refetch }: { categories: CashFlowC
 // -------------------------------------------------------------
 // CASHFLOW ALL VIEW (all records with multi-select + bulk actions)
 // -------------------------------------------------------------
-function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }: {
+function CashFlowAllView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
   cashFlowCategories: CashFlowCategoryRecord[];
+  bankAccounts: BankAccount[];
   onEditCashFlow: (c: CashFlow) => void;
   refetch: () => void;
 }) {
@@ -1800,6 +1854,7 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
   const [filterType, setFilterType] = useState<'all' | 'Income' | 'Expense'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'Paid' | 'Pending'>('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [filterAccount, setFilterAccount] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -1812,7 +1867,8 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
     const matchType = filterType === 'all' || c.type === filterType;
     const matchStatus = filterStatus === 'all' || c.status === filterStatus;
     const matchCategory = filterCategory === 'all' || c.category === filterCategory;
-    return matchSearch && matchType && matchStatus && matchCategory;
+    const matchAccount = filterAccount === 'all' || (filterAccount === 'none' ? !c.account_id : c.account_id === filterAccount);
+    return matchSearch && matchType && matchStatus && matchCategory && matchAccount;
   });
 
   const allSelected = filtered.length > 0 && filtered.every(c => selected.has(c.id));
@@ -1923,6 +1979,12 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
           <option value="all">Todas as categorias</option>
           {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
         </select>
+        <select value={filterAccount} onChange={e => setFilterAccount(e.target.value)}
+          className="field-input cursor-pointer">
+          <option value="all">Todas as contas</option>
+          <option value="none">Sem conta</option>
+          {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
       </div>
 
       {/* Bulk actions bar */}
@@ -1965,6 +2027,7 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
                 <th className="p-3 text-left">Data</th>
                 <th className="p-3 text-left">Descrição</th>
                 <th className="p-3 text-left">Categoria</th>
+                <th className="p-3 text-left">Conta</th>
                 <th className="p-3 text-left">Tipo</th>
                 <th className="p-3 text-right">Valor</th>
                 <th className="p-3 text-center">Status</th>
@@ -1973,7 +2036,7 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
             </thead>
             <tbody className="divide-y divide-gray-100/60">
               {filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-10 text-center text-[var(--color-ink-3)] text-sm">Nenhum lançamento encontrado.</td></tr>
+                <tr><td colSpan={9} className="p-10 text-center text-[var(--color-ink-3)] text-sm">Nenhum lançamento encontrado.</td></tr>
               ) : (
                 filtered.map(c => {
                   const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
@@ -1993,6 +2056,17 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                           {c.category}
                         </span>
+                      </td>
+                      <td className="p-3">
+                        {(() => {
+                          const acc = bankAccounts.find(a => a.id === c.account_id);
+                          return acc ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-ink-2)] whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
+                              {acc.name}
+                            </span>
+                          ) : <span className="text-[var(--color-ink-3)] text-xs">—</span>;
+                        })()}
                       </td>
                       <td className="p-3">
                         {c.type === 'Income'
@@ -2032,9 +2106,10 @@ function CashFlowAllView({ cashFlows, cashFlowCategories, onEditCashFlow, refetc
 // -------------------------------------------------------------
 // CASHFLOW VIEW
 // -------------------------------------------------------------
-function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }: {
+function CashFlowView({ cashFlows, cashFlowCategories, bankAccounts, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
   cashFlowCategories: CashFlowCategoryRecord[];
+  bankAccounts: BankAccount[];
   onEditCashFlow: (c: CashFlow) => void;
   refetch: () => void;
 }) {
@@ -2174,7 +2249,18 @@ function CashFlowView({ cashFlows, cashFlowCategories, onEditCashFlow, refetch }
               filteredCashFlows.map(c => (
                 <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
                   <td className="p-4 pl-6 text-[var(--color-ink-3)] font-medium whitespace-nowrap">{new Date(c.date + 'T12:00:00').toLocaleDateString('pt-BR')}</td>
-                  <td className="p-4 font-medium text-[var(--color-ink)]">{c.description || '-'}</td>
+                  <td className="p-4 font-medium text-[var(--color-ink)]">
+                    {c.description || '-'}
+                    {(() => {
+                      const acc = bankAccounts.find(a => a.id === c.account_id);
+                      return acc ? (
+                        <span className="block text-[11px] font-normal text-[var(--color-ink-3)] mt-0.5 inline-flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: acc.color }} />
+                          {acc.name}
+                        </span>
+                      ) : null;
+                    })()}
+                  </td>
                   <td className="p-4">
                     {(() => {
                       const catRecord = cashFlowCategories.find(cat => cat.name === c.category);
@@ -3265,9 +3351,11 @@ function ProposalFormView({ proposalData, services, clients, sectionTemplates, o
 // -------------------------------------------------------------
 // CASHFLOW FORM VIEW
 // -------------------------------------------------------------
-function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }: {
+function CashFlowFormView({ cashFlowData, cashFlowCategories, bankAccounts, suppliers, onSave, onCancel }: {
   cashFlowData: CashFlow | null;
   cashFlowCategories: CashFlowCategoryRecord[];
+  bankAccounts: BankAccount[];
+  suppliers: Supplier[];
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -3275,6 +3363,12 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
 
   const isEditing = !!cashFlowData;
   const [type, setType] = useState<CashFlowType>(cashFlowData?.type || 'Income');
+  // Contas ativas + a conta do lançamento mesmo se arquivada (para não sumir na edição).
+  const selectableAccounts = bankAccounts.filter(a => a.active || a.id === cashFlowData?.account_id);
+  const [accountId, setAccountId] = useState<string>(
+    cashFlowData?.account_id || bankAccounts.find(a => a.is_default && a.active)?.id || ''
+  );
+  const [supplierId, setSupplierId] = useState<string>(cashFlowData?.supplier_id || '');
 
   // Default category: existing value, or first matching category from DB, or empty string
   const getDefaultCategory = (t: CashFlowType) => {
@@ -3304,7 +3398,9 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
       const numericValue = parseFloat(value.replace(',', '.'));
 
       const payload = {
-        type, category, description, value: numericValue, date, status
+        type, category, description, value: numericValue, date, status,
+        account_id: accountId || null,
+        supplier_id: type === 'Expense' ? (supplierId || null) : null,
       };
 
       if (isEditing && cashFlowData) {
@@ -3409,6 +3505,36 @@ function CashFlowFormView({ cashFlowData, cashFlowCategories, onSave, onCancel }
                 className="field-input"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="field-label">Conta bancária</label>
+              <select
+                value={accountId}
+                onChange={e => setAccountId(e.target.value)}
+                className="field-input"
+              >
+                <option value="">Sem conta</option>
+                {selectableAccounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}{a.active ? '' : ' (arquivada)'}</option>
+                ))}
+              </select>
+            </div>
+            {type === 'Expense' && (
+              <div>
+                <label className="field-label">Fornecedor (opcional)</label>
+                <select
+                  value={supplierId}
+                  onChange={e => setSupplierId(e.target.value)}
+                  className="field-input"
+                >
+                  <option value="">Sem fornecedor</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="mt-4 flex justify-end gap-3 pt-6 border-t border-white/40">
             <button type="button" onClick={onCancel} className="btn-secondary">

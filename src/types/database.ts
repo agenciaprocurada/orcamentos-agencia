@@ -168,6 +168,10 @@ export type CashFlow = {
   boleto_url: string | null;
   boleto_status: string | null;
   payment_method: string | null;
+  account_id: string | null;
+  supplier_id: string | null;
+  recurring_expense_id: string | null;
+  competence: string | null; // 'YYYY-MM' quando gerado por recorrência
   created_at: string;
 };
 
@@ -176,6 +180,55 @@ export type CashFlowCategoryRecord = {
   name: string;
   type: 'Income' | 'Expense';
   color: string;
+  created_at: string;
+};
+
+// --- Financeiro (contas bancárias, transferências, recorrentes, fornecedores) ---
+
+export type BankAccount = {
+  id: string;
+  name: string;
+  bank_name: string | null;
+  // 'asaas' = conta especial onde boletos caem automaticamente; null nas demais.
+  system_key: string | null;
+  initial_balance: number;
+  color: string;
+  is_default: boolean;
+  active: boolean;
+  created_at: string;
+};
+
+export type Supplier = {
+  id: string;
+  name: string;
+  document: string | null;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type RecurringExpense = {
+  id: string;
+  description: string;
+  value: number;
+  category: string;
+  account_id: string | null;
+  supplier_id: string | null;
+  due_day: number;
+  active: boolean;
+  start_date: string;
+  end_date: string | null;
+  created_at: string;
+};
+
+export type AccountTransfer = {
+  id: string;
+  from_account_id: string;
+  to_account_id: string;
+  value: number;
+  date: string;
+  description: string | null;
   created_at: string;
 };
 
@@ -247,8 +300,28 @@ export interface Database {
       };
       cash_flow: {
         Row: CashFlow;
-        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; created_at?: string; };
-        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; created_at?: string; };
+        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; created_at?: string; };
+        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; created_at?: string; };
+      };
+      bank_accounts: {
+        Row: BankAccount;
+        Insert: { id?: string; name: string; bank_name?: string | null; system_key?: string | null; initial_balance?: number; color?: string; is_default?: boolean; active?: boolean; created_at?: string; };
+        Update: { id?: string; name?: string; bank_name?: string | null; system_key?: string | null; initial_balance?: number; color?: string; is_default?: boolean; active?: boolean; created_at?: string; };
+      };
+      suppliers: {
+        Row: Supplier;
+        Insert: { id?: string; name: string; document?: string | null; email?: string | null; phone?: string | null; notes?: string | null; created_at?: string; };
+        Update: { id?: string; name?: string; document?: string | null; email?: string | null; phone?: string | null; notes?: string | null; created_at?: string; };
+      };
+      recurring_expenses: {
+        Row: RecurringExpense;
+        Insert: { id?: string; description: string; value: number; category: string; account_id?: string | null; supplier_id?: string | null; due_day: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
+        Update: { id?: string; description?: string; value?: number; category?: string; account_id?: string | null; supplier_id?: string | null; due_day?: number; active?: boolean; start_date?: string; end_date?: string | null; created_at?: string; };
+      };
+      account_transfers: {
+        Row: AccountTransfer;
+        Insert: { id?: string; from_account_id: string; to_account_id: string; value: number; date: string; description?: string | null; created_at?: string; };
+        Update: { id?: string; from_account_id?: string; to_account_id?: string; value?: number; date?: string; description?: string | null; created_at?: string; };
       };
       cash_flow_categories: {
         Row: CashFlowCategoryRecord;

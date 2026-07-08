@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Acesso ao Supabase com SERVICE_ROLE: variável `SUPABASE_SERVICE_ROLE_KEY` no `.env` (gitignored — nunca colocar a chave neste arquivo, que é commitado).
+
 ## Variáveis de Template (Propostas / Contratos)
 
 Estas são as variáveis (placeholders `{{...}}`) disponíveis para substituição em modelos de propostas e contratos.

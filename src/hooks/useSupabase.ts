@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate, Contract, ContractTemplate, AgencySettings, Lead } from '../types/database';
+import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate, Contract, ContractTemplate, AgencySettings, Lead, BankAccount, Supplier, RecurringExpense, AccountTransfer } from '../types/database';
 
 // Snapshot of the last successful load, so a refresh paints data instantly
 // (stale-while-revalidate) instead of holding the whole UI on a spinner.
-const CACHE_KEY = 'procurada-data-cache-v1';
+// v2: adiciona os arrays do módulo Financeiro (invalida snapshots antigos).
+const CACHE_KEY = 'procurada-data-cache-v2';
 
 type DataSnapshot = {
     proposals: { proposal: Proposal; client: Client | null }[];
@@ -18,6 +19,10 @@ type DataSnapshot = {
     contracts: Contract[];
     contractTemplates: ContractTemplate[];
     agencySettings: AgencySettings | null;
+    bankAccounts: BankAccount[];
+    suppliers: Supplier[];
+    recurringExpenses: RecurringExpense[];
+    accountTransfers: AccountTransfer[];
 };
 
 function readCache(): DataSnapshot | null {
@@ -51,6 +56,10 @@ export function useSupabase() {
     const [contracts, setContracts] = useState<Contract[]>(cached?.contracts ?? []);
     const [contractTemplates, setContractTemplates] = useState<ContractTemplate[]>(cached?.contractTemplates ?? []);
     const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(cached?.agencySettings ?? null);
+    const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(cached?.bankAccounts ?? []);
+    const [suppliers, setSuppliers] = useState<Supplier[]>(cached?.suppliers ?? []);
+    const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(cached?.recurringExpenses ?? []);
+    const [accountTransfers, setAccountTransfers] = useState<AccountTransfer[]>(cached?.accountTransfers ?? []);
     // With a snapshot on screen there is nothing to wait for; the fetch below
     // refreshes silently. The spinner only shows on the very first login.
     const [loading, setLoading] = useState(!cached);
@@ -76,6 +85,10 @@ export function useSupabase() {
             { data: contractsData },
             { data: contractTemplatesData },
             { data: agencyData },
+            { data: bankAccountsData },
+            { data: suppliersData },
+            { data: recurringData },
+            { data: transfersData },
         ] = await Promise.all([
             supabase.from('proposals').select('*, client:clients(*)').order('created_at', { ascending: false }),
             supabase.from('cash_flow').select('*').order('date', { ascending: false }),
@@ -88,6 +101,10 @@ export function useSupabase() {
             supabase.from('contracts').select('*').order('created_at', { ascending: false }),
             supabase.from('contract_templates').select('*').order('title', { ascending: true }),
             supabase.from('agency_settings').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+            supabase.from('bank_accounts').select('*').order('name', { ascending: true }),
+            supabase.from('suppliers').select('*').order('name', { ascending: true }),
+            supabase.from('recurring_expenses').select('*').order('description', { ascending: true }),
+            supabase.from('account_transfers').select('*').order('date', { ascending: false }),
         ]);
 
         const mappedProposals = propData
@@ -105,6 +122,10 @@ export function useSupabase() {
         if (contractsData) setContracts(contractsData as Contract[]);
         if (contractTemplatesData) setContractTemplates(contractTemplatesData as ContractTemplate[]);
         setAgencySettings((agencyData as AgencySettings) || null);
+        if (bankAccountsData) setBankAccounts(bankAccountsData as BankAccount[]);
+        if (suppliersData) setSuppliers(suppliersData as Supplier[]);
+        if (recurringData) setRecurringExpenses(recurringData as RecurringExpense[]);
+        if (transfersData) setAccountTransfers(transfersData as AccountTransfer[]);
 
         hasData.current = true;
         setLoading(false);
@@ -124,6 +145,10 @@ export function useSupabase() {
                 contracts: (contractsData as Contract[]) ?? [],
                 contractTemplates: (contractTemplatesData as ContractTemplate[]) ?? [],
                 agencySettings: (agencyData as AgencySettings) || null,
+                bankAccounts: (bankAccountsData as BankAccount[]) ?? [],
+                suppliers: (suppliersData as Supplier[]) ?? [],
+                recurringExpenses: (recurringData as RecurringExpense[]) ?? [],
+                accountTransfers: (transfersData as AccountTransfer[]) ?? [],
             };
             localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot));
         } catch { /* noop */ }
@@ -140,5 +165,5 @@ export function useSupabase() {
     // Silent: refreshes data without triggering the loading spinner (keeps current view mounted)
     const silentRefetch = useCallback(() => loadAll(false), [loadAll]);
 
-    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, loading, refetch: fetchDashboardData, silentRefetch };
+    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch: fetchDashboardData, silentRefetch };
 }
