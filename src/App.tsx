@@ -253,7 +253,7 @@ function App() {
           <nav className="flex flex-col gap-5 flex-1 overflow-y-auto -mr-2 pr-2">
             <div className="flex flex-col gap-1">
               <NavButton icon={<LayoutDashboard size={18} />} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-              <NavButton icon={<Inbox size={18} />} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
+              <NavButton icon={<Inbox size={18} />} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} badge={leads.filter(l => l.status === 'novo').length} />
               <NavButton icon={<FileText size={18} />} label="Propostas" active={activeTab === 'proposals'} onClick={() => setActiveTab('proposals')} />
               <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
               <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
@@ -604,7 +604,7 @@ function App() {
 // -------------------------------------------------------------
 // CURRENCY INPUT (BRL formatted)
 // -------------------------------------------------------------
-function NavButton({ icon, label, active, onClick }: { icon: ReactNode; label: string; active: boolean; onClick: () => void }) {
+function NavButton({ icon, label, active, onClick, badge }: { icon: ReactNode; label: string; active: boolean; onClick: () => void; badge?: number }) {
   return (
     <button
       onClick={onClick}
@@ -614,6 +614,11 @@ function NavButton({ icon, label, active, onClick }: { icon: ReactNode; label: s
     >
       <span className={active ? 'text-[var(--color-primary)]' : 'text-[var(--color-ink-3)] group-hover:text-[var(--color-ink-2)] transition-colors'}>{icon}</span>
       {label}
+      {badge != null && badge > 0 && (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-blue-500 text-white text-[11px] font-semibold leading-none">
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
