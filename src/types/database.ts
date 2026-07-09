@@ -172,6 +172,8 @@ export type CashFlow = {
   supplier_id: string | null;
   recurring_expense_id: string | null;
   competence: string | null; // 'YYYY-MM' quando gerado por recorrência
+  import_fingerprint: string | null; // antiduplicata da importação de extrato
+  source: string | null; // 'extrato' quando veio de importação de extrato
   created_at: string;
 };
 
@@ -301,8 +303,8 @@ export interface Database {
       };
       cash_flow: {
         Row: CashFlow;
-        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; created_at?: string; };
-        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; created_at?: string; };
+        Insert: { id?: string; type: CashFlowType; category: string; value: number; date: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; import_fingerprint?: string | null; source?: string | null; created_at?: string; };
+        Update: { id?: string; type?: CashFlowType; category?: string; value?: number; date?: string; description?: string | null; status?: CashFlowStatus; client_id?: string | null; proposal_id?: string | null; installment_number?: number | null; asaas_payment_id?: string | null; boleto_url?: string | null; boleto_status?: string | null; payment_method?: string | null; account_id?: string | null; supplier_id?: string | null; recurring_expense_id?: string | null; competence?: string | null; import_fingerprint?: string | null; source?: string | null; created_at?: string; };
       };
       bank_accounts: {
         Row: BankAccount;

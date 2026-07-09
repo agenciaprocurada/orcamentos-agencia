@@ -52,6 +52,7 @@ import { FinanceOverviewView } from './components/FinanceOverviewView';
 import { FinanceAccountsView } from './components/FinanceAccountsView';
 import { TransfersView } from './components/TransfersView';
 import { RecurringExpensesView } from './components/RecurringExpensesView';
+import { StatementImportView } from './components/StatementImportView';
 import { SuppliersView } from './components/SuppliersView';
 import { FinanceReportsView } from './components/FinanceReportsView';
 import { DefaultEditor as Editor } from 'react-simple-wysiwyg';
@@ -59,7 +60,7 @@ import type { Client, Proposal, CashFlow, ProposalStatus, CashFlowType, CashFlow
 import type { User } from '@supabase/supabase-js';
 
 // Abas agrupadas sob o item "Financeiro" da sidebar.
-const FINANCE_TABS: string[] = ['cashflow', 'cashflow-all', 'cashflow-categories', 'cashflow-form', 'finance-accounts', 'finance-transfers', 'finance-recurring', 'finance-suppliers', 'finance-reports'];
+const FINANCE_TABS: string[] = ['cashflow', 'cashflow-all', 'cashflow-categories', 'cashflow-form', 'finance-accounts', 'finance-transfers', 'finance-recurring', 'finance-import', 'finance-suppliers', 'finance-reports'];
 
 // Ícone de status do lançamento nas listagens: recebido/pago, pendente ou em atraso.
 function CashStatusIcon({ c }: { c: CashFlow }) {
@@ -111,7 +112,7 @@ function PaymentSlot({ c, genBusy, onGenerate }: { c: CashFlow; genBusy?: boolea
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-import' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
   // Tipo pré-selecionado ao abrir "Novo Lançamento" pelos atalhos Nova receita/Nova despesa.
   const [newCashFlowType, setNewCashFlowType] = useState<CashFlowType>('Income');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
@@ -266,6 +267,7 @@ function App() {
                     ['finance-accounts', 'Contas'],
                     ['finance-transfers', 'Transferências'],
                     ['finance-recurring', 'Recorrentes'],
+                    ['finance-import', 'Importar Extrato'],
                     ['finance-suppliers', 'Fornecedores'],
                     ['finance-reports', 'Relatórios'],
                     ['cashflow-categories', 'Categorias'],
@@ -335,6 +337,7 @@ function App() {
                                 activeTab === 'finance-accounts' ? 'Contas Bancárias' :
                                 activeTab === 'finance-transfers' ? 'Transferências entre Contas' :
                                 activeTab === 'finance-recurring' ? 'Recorrências (Receitas e Despesas)' :
+                                activeTab === 'finance-import' ? 'Importar Extrato Bancário' :
                                 activeTab === 'finance-suppliers' ? 'Fornecedores' :
                                 activeTab === 'finance-reports' ? 'Relatórios (DRE)' :
                                 activeTab === 'cashflow-form' ? (selectedCashFlow ? 'Editar Lançamento' : 'Novo Lançamento') :
@@ -470,6 +473,7 @@ function App() {
                 {activeTab === 'finance-accounts' &&<FinanceAccountsView accounts={bankAccounts} cashFlows={cashFlows} transfers={accountTransfers} refetch={silentRefetch} />}
                 {activeTab === 'finance-transfers' && <TransfersView accounts={bankAccounts} transfers={accountTransfers} refetch={silentRefetch} />}
                 {activeTab === 'finance-recurring' && <RecurringExpensesView recurring={recurringExpenses} accounts={bankAccounts} suppliers={suppliers} categories={cashFlowCategories} refetch={silentRefetch} />}
+                {activeTab === 'finance-import' && <StatementImportView accounts={bankAccounts} categories={cashFlowCategories} refetch={silentRefetch} />}
                 {activeTab === 'finance-suppliers' && <SuppliersView suppliers={suppliers} cashFlows={cashFlows} refetch={silentRefetch} />}
                 {activeTab === 'finance-reports' && <FinanceReportsView cashFlows={cashFlows} categories={cashFlowCategories} accounts={bankAccounts} transfers={accountTransfers} />}
                 {activeTab === 'cashflow-form' && (
