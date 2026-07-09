@@ -84,14 +84,21 @@ async function notifyNewLead(lead: {
         });
         await subscriber.pushTextMessage(message, {});
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes("410") || msg.includes("404")) {
+        // PushMessageError não preenche .message — o status vem em .response.
+        const status = err instanceof webpush.PushMessageError
+          ? err.response.status
+          : 0;
+        if (status === 404 || status === 410) {
+          // Inscrição expirada/revogada: remove para não acumular lixo.
           await supabase
             .from("push_subscriptions")
             .delete()
             .eq("endpoint", s.endpoint);
         } else {
-          console.error("Falha ao enviar push:", msg);
+          console.error(
+            `Falha ao enviar push (status ${status}):`,
+            err instanceof Error ? err.toString() : String(err),
+          );
         }
       }
     }),

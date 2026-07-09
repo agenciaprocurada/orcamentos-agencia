@@ -74,12 +74,22 @@ Deno.serve(async (req) => {
         );
         result.sent++;
       } catch (e) {
-        result.errors.push(
-          "send: " +
-            (e instanceof Error ? e.message : String(e)) +
-            " | endpoint: " +
-            String(s.endpoint).slice(0, 50),
-        );
+        const status = e instanceof webpush.PushMessageError
+          ? e.response.status
+          : 0;
+        if (status === 404 || status === 410) {
+          await supabase
+            .from("push_subscriptions")
+            .delete()
+            .eq("endpoint", s.endpoint);
+          result.errors.push(
+            `send: ${status} (inscricao morta, REMOVIDA) | ${String(s.endpoint).slice(0, 50)}`,
+          );
+        } else {
+          result.errors.push(
+            `send: status=${status} ${e instanceof Error ? e.toString() : String(e)} | ${String(s.endpoint).slice(0, 50)}`,
+          );
+        }
       }
     }
   } catch (e) {
