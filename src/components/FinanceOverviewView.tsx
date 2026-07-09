@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
-  AlertCircle, ArrowDownRight, ArrowUpRight, Barcode, CheckCircle, ChevronLeft,
-  ChevronRight, ExternalLink, Landmark, Loader2, Wallet,
+  AlertCircle, ArrowDownRight, ArrowUpRight, Barcode, BarChart3, CheckCircle, ChevronLeft,
+  ChevronRight, ExternalLink, Landmark, Loader2, PieChart, Wallet,
 } from 'lucide-react';
-import type { AccountTransfer, BankAccount, CashFlow } from '../types/database';
+import type { AccountTransfer, BankAccount, CashFlow, CashFlowCategoryRecord } from '../types/database';
 import { computeAccountBalances, formatBRL, totalBalance } from '../lib/finance';
+
+// Paleta de reserva para categorias sem cor cadastrada.
+const PIE_FALLBACK = ['#C13584', '#059669', '#E11D48', '#F59E0B', '#6366F1', '#0EA5E9', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
 // Cores do fluxo (validadas p/ daltonismo; polaridade também é codificada
 // pela direção das barras: entradas sobem, saídas descem).
@@ -16,10 +19,11 @@ const toKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSta
 
 type DayFlow = { day: number; inPaid: number; inPending: number; outPaid: number; outPending: number; net: number };
 
-export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCashFlow, refetch }: {
+export function FinanceOverviewView({ cashFlows, accounts, transfers, categories, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
   accounts: BankAccount[];
   transfers: AccountTransfer[];
+  categories: CashFlowCategoryRecord[];
   onEditCashFlow: (c: CashFlow) => void;
   refetch: () => void;
 }) {
@@ -76,6 +80,26 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCash
 
   const hasMonthData = series.some(d => d.inPaid + d.inPending + d.outPaid + d.outPending > 0);
 
+  // ---- Categorias do mês exibido (para os gráficos de pizza)
+  const catData = useMemo(() => {
+    const colorOf = new Map(categories.map(c => [c.name, c.color]));
+    const build = (type: 'Income' | 'Expense') => {
+      const totals = new Map<string, number>();
+      for (const c of cashFlows) {
+        if (c.type !== type || !c.date?.startsWith(monthPrefix)) continue;
+        const name = c.category || 'Sem categoria';
+        totals.set(name, (totals.get(name) || 0) + (Number(c.value) || 0));
+      }
+      const rows = [...totals.entries()]
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, value], i) => ({ name, value, color: colorOf.get(name) || PIE_FALLBACK[i % PIE_FALLBACK.length] }));
+      const total = rows.reduce((s, r) => s + r.value, 0);
+      return { rows, total };
+    };
+    return { income: build('Income'), expense: build('Expense') };
+  }, [cashFlows, categories, monthPrefix]);
+
   // ---- Lista "precisa de atenção": pendentes vencidos ou vencendo hoje
   const attention = useMemo(
     () => cashFlows
@@ -110,6 +134,16 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCash
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl [font-variant-numeric:tabular-nums]">
+
+      {/* ---- Seletor de mês (governa o fluxo e os gráficos de categoria) */}
+      <div className="flex items-center gap-3">
+        <p className="text-sm font-semibold text-[var(--color-ink-2)]">Mês de referência</p>
+        <div className="ml-auto flex items-center gap-2 bg-white/60 border border-white/80 rounded-xl p-1 shadow-sm">
+          <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Mês anterior"><ChevronLeft size={16} /></button>
+          <span className="font-semibold text-sm w-36 text-center text-[var(--color-ink-2)]">{monthLabel}</span>
+          <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Próximo mês"><ChevronRight size={16} /></button>
+        </div>
+      </div>
 
       {/* ---- KPIs de gestão */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -158,18 +192,14 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCash
         </div>
       </div>
 
-      {/* ---- Fluxo de caixa do mês */}
+      {/* ---- Fluxo + categorias (pizza): lado a lado no desktop, empilhados no mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+
+      {/* Fluxo de caixa do mês */}
       <div className="glass-panel overflow-hidden">
-        <div className="p-4 sm:px-6 border-b border-white/40 bg-white/20 flex flex-wrap items-center gap-3">
-          <div>
-            <p className="text-sm font-semibold text-[var(--color-ink-2)]">Fluxo de caixa diário</p>
-            <p className="text-xs text-[var(--color-ink-3)]">Entradas e saídas por dia de vencimento; a linha é o acumulado do mês.</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2 bg-white/60 border border-white/80 rounded-xl p-1 shadow-sm">
-            <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Mês anterior"><ChevronLeft size={16} /></button>
-            <span className="font-semibold text-sm w-36 text-center text-[var(--color-ink-2)]">{monthLabel}</span>
-            <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Próximo mês"><ChevronRight size={16} /></button>
-          </div>
+        <div className="p-4 sm:px-6 border-b border-white/40 bg-white/20">
+          <p className="text-sm font-semibold text-[var(--color-ink-2)]">Fluxo de caixa diário</p>
+          <p className="text-xs text-[var(--color-ink-3)]">Entradas e saídas por dia de vencimento; a linha é o acumulado do mês.</p>
         </div>
 
         {!hasMonthData ? (
@@ -239,6 +269,11 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCash
             </div>
           </div>
         )}
+      </div>
+
+      {/* Categorias do mês (pizza): despesas e receitas */}
+        <CategoryPie title="Despesas por categoria" rows={catData.expense.rows} total={catData.expense.total} centerColor={EXPENSE} />
+        <CategoryPie title="Receitas por categoria" rows={catData.income.rows} total={catData.income.total} centerColor={INCOME} />
       </div>
 
       {/* ---- Atenção + saldo por conta */}
@@ -315,6 +350,87 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, onEditCash
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---- Gráfico de pizza cheia com rótulos externos (nome + %), estilo planilha.
+function CategoryPie({ title, rows, total, centerColor }: {
+  title: string;
+  rows: { name: string; value: number; color: string }[];
+  total: number;
+  centerColor: string;
+}) {
+  const [chart, setChart] = useState<'pie' | 'bar'>('pie');
+  const CX = 180, CY = 132, R = 70;
+  const pt = (frac: number, radius: number) => {
+    const a = (-90 + 360 * frac) * Math.PI / 180;
+    return { x: CX + radius * Math.cos(a), y: CY + radius * Math.sin(a) };
+  };
+  const trunc = (s: string) => (s.length > 20 ? s.slice(0, 19) + '…' : s);
+
+  let acc = 0;
+  const slices = rows.map(r => {
+    const frac = total > 0 ? r.value / total : 0;
+    const start = acc, end = acc + frac;
+    acc = end;
+    const mid = (start + end) / 2;
+    const p0 = pt(start, R), p1 = pt(end, R);
+    const large = frac > 0.5 ? 1 : 0;
+    // Fatia única de 100% precisa de dois arcos (SVG não fecha círculo completo).
+    const d = frac >= 0.999
+      ? `M ${CX} ${(CY - R).toFixed(2)} A ${R} ${R} 0 1 1 ${(CX - 0.01).toFixed(2)} ${(CY - R).toFixed(2)} Z`
+      : `M ${CX} ${CY} L ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} Z`;
+    const lp = pt(mid, R + 12);
+    const cosMid = Math.cos((-90 + 360 * mid) * Math.PI / 180);
+    return { ...r, frac, d, lx: lp.x, ly: lp.y, anchor: cosMid >= 0 ? 'start' : 'end', pct: Math.round(frac * 100) };
+  });
+
+  return (
+    <div className="glass-panel overflow-hidden">
+      <div className="p-4 border-b border-white/40 bg-white/20 flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: centerColor }} />
+        <p className="text-sm font-semibold text-[var(--color-ink-2)]">{title}</p>
+        <span className="ml-auto text-xs text-[var(--color-ink-3)] hidden sm:inline">{formatBRL(total)}</span>
+        <div className="ml-auto sm:ml-2 flex items-center bg-white/60 border border-white/80 rounded-lg p-0.5 shadow-sm">
+          <button onClick={() => setChart('pie')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${chart === 'pie' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink-2)]'}`} aria-label="Gráfico de pizza" title="Pizza"><PieChart size={15} /></button>
+          <button onClick={() => setChart('bar')} className={`p-1.5 rounded-md transition-colors cursor-pointer ${chart === 'bar' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink-2)]'}`} aria-label="Gráfico de barras" title="Barras"><BarChart3 size={15} /></button>
+        </div>
+      </div>
+
+      {total === 0 ? (
+        <div className="p-8 text-center text-sm text-[var(--color-ink-3)]">Nenhum lançamento neste mês.</div>
+      ) : chart === 'pie' ? (
+        <div className="p-3 sm:p-4 flex justify-center">
+          <svg viewBox="0 0 360 268" className="w-full max-w-[380px] h-auto" role="img" aria-label={title}>
+            {slices.map(s => (
+              <path key={s.name} d={s.d} fill={s.color} stroke="#fff" strokeWidth="2">
+                <title>{s.name}: {formatBRL(s.value)} ({s.pct}%)</title>
+              </path>
+            ))}
+            {slices.filter(s => s.frac >= 0.04).map(s => (
+              <text key={s.name} x={s.lx} y={s.ly} textAnchor={s.anchor as 'start' | 'end'} fontSize="11" fill="#1b1420">
+                <tspan x={s.lx} dy="-1" fontWeight="600">{trunc(s.name)}</tspan>
+                <tspan x={s.lx} dy="12" fillOpacity="0.55">{s.pct}%</tspan>
+              </text>
+            ))}
+          </svg>
+        </div>
+      ) : (
+        <div className="p-4 flex flex-col gap-3">
+          {slices.map(s => (
+            <div key={s.name}>
+              <div className="flex items-baseline gap-2 text-xs mb-1">
+                <span className="font-medium text-[var(--color-ink-2)] truncate min-w-0">{s.name}</span>
+                <span className="ml-auto text-[var(--color-ink-3)] tabular-nums whitespace-nowrap">{s.pct}% · <span className="font-semibold text-[var(--color-ink)]">{formatBRL(s.value)}</span></span>
+              </div>
+              <div className="h-2.5 rounded-full bg-black/5 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.max(s.frac * 100, 1)}%`, backgroundColor: s.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

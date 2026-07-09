@@ -424,7 +424,7 @@ function App() {
               </div>
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
-                {activeTab === 'dashboard' && <FinanceOverviewView cashFlows={cashFlows} accounts={bankAccounts} transfers={accountTransfers} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
+                {activeTab === 'dashboard' && <FinanceOverviewView cashFlows={cashFlows} accounts={bankAccounts} transfers={accountTransfers} categories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
                 {activeTab === 'tasks' && <TasksView tasks={tasks} refetch={refetch} />}
                 {activeTab === 'leads' && <LeadsView leads={leads} refetch={silentRefetch} />}
                 {activeTab === 'proposals' && (
