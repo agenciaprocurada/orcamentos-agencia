@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  ListTodo,
   GripVertical,
   Layers,
   Link2,
@@ -43,7 +42,6 @@ import './App.css';
 import { useSupabase, clearDataCache } from './hooks/useSupabase';
 import { supabase, getStoredUser } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
-import { TasksView } from './components/TasksView';
 import { LeadsView } from './components/LeadsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
@@ -112,7 +110,7 @@ function PaymentSlot({ c, genBusy, onGenerate }: { c: CashFlow; genBusy?: boolea
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-import' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'tasks' | 'leads'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-import' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'leads'>('dashboard');
   // Tipo pré-selecionado ao abrir "Novo Lançamento" pelos atalhos Nova receita/Nova despesa.
   const [newCashFlowType, setNewCashFlowType] = useState<CashFlowType>('Income');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
@@ -169,7 +167,7 @@ function App() {
     return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch, silentRefetch } = useSupabase();
 
   // Loads once per signed-in user. The ref guards against duplicated effect
   // runs (React StrictMode) re-triggering the full load and re-showing the spinner.
@@ -257,7 +255,6 @@ function App() {
               <NavButton icon={<FileText size={18} />} label="Propostas" active={activeTab === 'proposals'} onClick={() => setActiveTab('proposals')} />
               <NavButton icon={<FileSignature size={18} />} label="Contratos" active={['contracts', 'contract-form', 'contract-templates', 'contract-template-form'].includes(activeTab)} onClick={() => setActiveTab('contracts')} />
               <NavButton icon={<Users size={18} />} label="Clientes" active={activeTab === 'clients' || activeTab === 'client-form'} onClick={() => setActiveTab('clients')} />
-              <NavButton icon={<ListTodo size={18} />} label="Tarefas" active={activeTab === 'tasks'} onClick={() => setActiveTab('tasks')} />
               <NavButton icon={<DollarSign size={18} />} label="Financeiro" active={FINANCE_TABS.includes(activeTab)} onClick={() => setActiveTab('cashflow')} />
               {FINANCE_TABS.includes(activeTab) && (
                 <div className="ml-5 mt-0.5 flex flex-col gap-0.5 border-l border-[var(--color-primary)]/20 pl-3">
@@ -326,7 +323,6 @@ function App() {
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--color-ink)] truncate">
               {activeTab === 'dashboard' ? 'Visão Geral' :
                 activeTab === 'leads' ? 'CRM — Recepção de Leads' :
-                activeTab === 'tasks' ? 'Tarefas' :
                   activeTab === 'proposals' ? 'Gestão de Propostas' :
                     activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
                       activeTab === 'services' ? 'Serviços Base' :
@@ -425,7 +421,6 @@ function App() {
             ) : (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
                 {activeTab === 'dashboard' && <FinanceOverviewView cashFlows={cashFlows} accounts={bankAccounts} transfers={accountTransfers} categories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
-                {activeTab === 'tasks' && <TasksView tasks={tasks} refetch={refetch} />}
                 {activeTab === 'leads' && <LeadsView leads={leads} refetch={silentRefetch} />}
                 {activeTab === 'proposals' && (
                   <ProposalsView

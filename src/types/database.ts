@@ -235,17 +235,6 @@ export type AccountTransfer = {
   created_at: string;
 };
 
-export type Task = {
-  id: string;
-  created_at: string;
-  title: string;
-  description: string | null;
-  due_date: string | null;
-  completed: boolean;
-  project: string;
-  priority: string;
-};
-
 // --- Leads (CRM) — inbound do formulário do site ---
 
 export type LeadStatus = 'novo' | 'respondido' | 'proposta' | 'concluido';
@@ -330,11 +319,6 @@ export interface Database {
         Row: CashFlowCategoryRecord;
         Insert: { id?: string; name: string; type: 'Income' | 'Expense'; color?: string; created_at?: string; };
         Update: { id?: string; name?: string; type?: 'Income' | 'Expense'; color?: string; created_at?: string; };
-      };
-      tasks: {
-        Row: Task;
-        Insert: { id?: string; created_at?: string; title: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
-        Update: { id?: string; created_at?: string; title?: string; description?: string | null; due_date?: string | null; completed?: boolean; project?: string; priority?: string; };
       };
       leads: {
         Row: Lead;

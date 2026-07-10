@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, Task, SectionTemplate, Contract, ContractTemplate, AgencySettings, Lead, BankAccount, Supplier, RecurringExpense, AccountTransfer } from '../types/database';
+import type { Proposal, CashFlow, Client, Service, CashFlowCategoryRecord, SectionTemplate, Contract, ContractTemplate, AgencySettings, Lead, BankAccount, Supplier, RecurringExpense, AccountTransfer } from '../types/database';
 
 // Snapshot of the last successful load, so a refresh paints data instantly
 // (stale-while-revalidate) instead of holding the whole UI on a spinner.
@@ -13,7 +13,6 @@ type DataSnapshot = {
     clients: Client[];
     services: Service[];
     cashFlowCategories: CashFlowCategoryRecord[];
-    tasks: Task[];
     leads: Lead[];
     sectionTemplates: SectionTemplate[];
     contracts: Contract[];
@@ -50,7 +49,6 @@ export function useSupabase() {
     const [clients, setClients] = useState<Client[]>(cached?.clients ?? []);
     const [services, setServices] = useState<Service[]>(cached?.services ?? []);
     const [cashFlowCategories, setCashFlowCategories] = useState<CashFlowCategoryRecord[]>(cached?.cashFlowCategories ?? []);
-    const [tasks, setTasks] = useState<Task[]>(cached?.tasks ?? []);
     const [leads, setLeads] = useState<Lead[]>(cached?.leads ?? []);
     const [sectionTemplates, setSectionTemplates] = useState<SectionTemplate[]>(cached?.sectionTemplates ?? []);
     const [contracts, setContracts] = useState<Contract[]>(cached?.contracts ?? []);
@@ -79,7 +77,6 @@ export function useSupabase() {
             { data: clientData },
             { data: serviceData },
             { data: categoriesData },
-            { data: tasksData },
             { data: leadsData },
             { data: sectionTemplatesData },
             { data: contractsData },
@@ -95,7 +92,6 @@ export function useSupabase() {
             supabase.from('clients').select('*').order('name', { ascending: true }),
             supabase.from('services').select('*').order('name', { ascending: true }),
             supabase.from('cash_flow_categories').select('*').order('type', { ascending: true }).order('name', { ascending: true }),
-            supabase.from('tasks').select('*').order('created_at', { ascending: false }),
             supabase.from('leads').select('*').order('created_at', { ascending: false }),
             supabase.from('proposal_section_templates').select('*').order('title', { ascending: true }),
             supabase.from('contracts').select('*').order('created_at', { ascending: false }),
@@ -116,7 +112,6 @@ export function useSupabase() {
         if (clientData) setClients(clientData as Client[]);
         if (serviceData) setServices(serviceData as Service[]);
         if (categoriesData) setCashFlowCategories(categoriesData as CashFlowCategoryRecord[]);
-        if (tasksData) setTasks(tasksData as Task[]);
         if (leadsData) setLeads(leadsData as Lead[]);
         if (sectionTemplatesData) setSectionTemplates(sectionTemplatesData as SectionTemplate[]);
         if (contractsData) setContracts(contractsData as Contract[]);
@@ -139,7 +134,6 @@ export function useSupabase() {
                 clients: (clientData as Client[]) ?? [],
                 services: (serviceData as Service[]) ?? [],
                 cashFlowCategories: (categoriesData as CashFlowCategoryRecord[]) ?? [],
-                tasks: (tasksData as Task[]) ?? [],
                 leads: (leadsData as Lead[]) ?? [],
                 sectionTemplates: (sectionTemplatesData as SectionTemplate[]) ?? [],
                 contracts: (contractsData as Contract[]) ?? [],
@@ -165,5 +159,5 @@ export function useSupabase() {
     // Silent: refreshes data without triggering the loading spinner (keeps current view mounted)
     const silentRefetch = useCallback(() => loadAll(false), [loadAll]);
 
-    return { proposals, cashFlows, clients, services, cashFlowCategories, tasks, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch: fetchDashboardData, silentRefetch };
+    return { proposals, cashFlows, clients, services, cashFlowCategories, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch: fetchDashboardData, silentRefetch };
 }
