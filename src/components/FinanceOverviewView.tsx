@@ -193,7 +193,7 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
       </div>
 
       {/* ---- Fluxo + categorias (pizza): lado a lado no desktop, empilhados no mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
 
       {/* Fluxo de caixa do mês */}
       <div className="glass-panel overflow-hidden">
@@ -277,7 +277,7 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
       </div>
 
       {/* ---- Atenção + saldo por conta */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         <div className="glass-panel overflow-hidden">
           <div className="p-4 border-b border-white/40 bg-white/20 flex items-center gap-2">
             <AlertCircle size={15} className={attention.length > 0 ? 'text-rose-500' : 'text-[var(--color-ink-3)]'} />

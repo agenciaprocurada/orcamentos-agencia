@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Landmark, Plus, Loader2, Pencil, Archive, ArchiveRestore, Wallet, X } from 'lucide-react';
+import { Landmark, Plus, Loader2, Pencil, Archive, ArchiveRestore, Wallet, X, Scale } from 'lucide-react';
 import type { AccountTransfer, BankAccount, CashFlow } from '../types/database';
 import { computeAccountBalances, totalBalance, formatBRL } from '../lib/finance';
 
@@ -23,6 +23,9 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [adjusting, setAdjusting] = useState<{ account: BankAccount; balance: number } | null>(null);
+  const [realBalance, setRealBalance] = useState('');
+  const [adjustSaving, setAdjustSaving] = useState(false);
 
   const balances = computeAccountBalances(accounts, cashFlows, transfers);
   const activeBalances = balances.filter(b => b.account.active);
@@ -32,6 +35,7 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
     setEditing(null);
     setName(''); setBankName(''); setInitialBalance('0'); setColor('#3B82F6'); setIsDefault(false);
     setError(null);
+    setAdjusting(null);
     setShowForm(true);
   };
 
@@ -40,6 +44,7 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
     setName(acc.name); setBankName(acc.bank_name || ''); setInitialBalance(String(acc.initial_balance));
     setColor(acc.color); setIsDefault(acc.is_default);
     setError(null);
+    setAdjusting(null);
     setShowForm(true);
   };
 
@@ -72,6 +77,37 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
       setError(err.message || 'Erro ao salvar conta.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openAdjust = (account: BankAccount, balance: number) => {
+    setAdjusting({ account, balance });
+    setRealBalance('');
+    setError(null);
+    setShowForm(false);
+  };
+
+  // Corrige a diferença no saldo inicial da conta: nenhum lançamento é criado
+  // ou alterado, então movimentações do mês e DRE ficam intactos.
+  const handleAdjust = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjusting || realBalance.trim() === '') return;
+    const delta = Number(realBalance) - adjusting.balance;
+    if (delta === 0) { setAdjusting(null); return; }
+    setAdjustSaving(true);
+    setError(null);
+    try {
+      const newInitial = Number(adjusting.account.initial_balance) + delta;
+      const { error: err } = await supabase.from('bank_accounts')
+        .update({ initial_balance: newInitial })
+        .eq('id', adjusting.account.id);
+      if (err) throw err;
+      setAdjusting(null);
+      refetch();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao ajustar saldo.');
+    } finally {
+      setAdjustSaving(false);
     }
   };
 
@@ -154,6 +190,42 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
         </form>
       )}
 
+      {/* Ajuste de saldo */}
+      {adjusting && (
+        <form onSubmit={handleAdjust} className="glass-panel p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-[var(--color-ink-2)] text-sm uppercase tracking-wider">
+              Ajustar saldo — {adjusting.account.name}
+            </h4>
+            <button type="button" onClick={() => setAdjusting(null)} className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={18} /></button>
+          </div>
+          <p className="text-sm text-[var(--color-ink-3)]">
+            Saldo no sistema: <strong className="text-[var(--color-ink)]">{formatBRL(adjusting.balance)}</strong>.
+            Digite o saldo que está no banco agora; a diferença é corrigida no saldo inicial da conta, sem criar nem alterar lançamentos.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-ink-3)] mb-1">Saldo real na conta (R$) *</label>
+              <input type="number" step="0.01" value={realBalance} onChange={e => setRealBalance(e.target.value)} required autoFocus className="field-input" />
+            </div>
+            {realBalance.trim() !== '' && (
+              <p className="text-sm text-[var(--color-ink-3)] pb-2">
+                Diferença a ajustar:{' '}
+                <strong className={Number(realBalance) - adjusting.balance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                  {formatBRL(Number(realBalance) - adjusting.balance)}
+                </strong>
+              </p>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button type="submit" disabled={adjustSaving} className="btn-primary">
+              {adjustSaving ? <Loader2 size={16} className="animate-spin" /> : <Scale size={16} />}
+              Ajustar saldo
+            </button>
+          </div>
+        </form>
+      )}
+
       {/* Cards das contas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {activeBalances.map(({ account, balance, projected }) => (
@@ -182,6 +254,7 @@ export function FinanceAccountsView({ accounts, cashFlows, transfers, refetch }:
                 <p className="text-[11px] text-[var(--color-ink-3)]">Previsto (com pendentes): {formatBRL(projected)}</p>
               </div>
               <div className="flex gap-1">
+                <button onClick={() => openAdjust(account, balance)} title="Ajustar saldo" className="icon-action"><Scale size={15} /></button>
                 <button onClick={() => openEdit(account)} title="Editar" className="icon-action"><Pencil size={15} /></button>
                 {account.system_key !== 'asaas' && (
                   <button onClick={() => toggleArchive(account)} disabled={busy === account.id} title="Arquivar" className="icon-action">
