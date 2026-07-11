@@ -1,10 +1,14 @@
 # Etapa 1: Build da aplicação
-FROM node:20-alpine as build
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
 # Copia os arquivos de dependência primeiro para garantir que o cache de npm intall é preservado se não for alterado
 COPY package*.json ./
+
+# Puppeteer é devDependency usado só localmente; sem isso o npm ci baixa
+# ~170 MB de Chrome a cada build e estoura o disco do servidor (ENOSPC).
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 # Instala as dependências (ci pra builds automatizados é preferível do que install diretamente)
 RUN npm ci
