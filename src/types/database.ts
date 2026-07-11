@@ -235,6 +235,61 @@ export type AccountTransfer = {
   created_at: string;
 };
 
+// --- Gestão > Projetos ---
+
+export type ProjectType = 'oneoff' | 'recurring';
+export type ProjectFrequency = 'weekly' | 'monthly';
+export type ProjectStatus = 'active' | 'paused' | 'completed';
+
+export type Project = {
+  id: string;
+  name: string;
+  client_id: string | null;
+  proposal_id: string | null;
+  type: ProjectType;
+  frequency: ProjectFrequency | null; // só quando type = 'recurring'
+  status: ProjectStatus;
+  start_date: string | null;
+  end_date: string | null;
+  color: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type ProjectTaskGroup = {
+  id: string;
+  project_id: string;
+  name: string;
+  sort_order: number;
+  start_date: string | null; // usada quando o grupo NÃO depende do anterior
+  end_date: string | null;
+  depends_on_previous: boolean; // padrão: depende do grupo anterior
+  created_at: string;
+};
+
+// Em projetos recorrentes: is_template = true marca a tarefa-modelo;
+// as instâncias geradas apontam para ela via template_id + period.
+export type ProjectTask = {
+  id: string;
+  project_id: string;
+  group_id: string | null;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  due_date: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  sort_order: number;
+  duration_hours: number | null; // horas de trabalho (8h úteis/dia, seg-sex)
+  depends_on_previous: boolean; // padrão: depende da tarefa anterior do grupo
+  is_template: boolean;
+  template_id: string | null;
+  period: string | null; // 'YYYY-MM' ou 'YYYY-Www'
+  due_rule: number | null; // dia do mês (mensal) ou dia da semana 1=seg..7=dom (semanal)
+  assignee: string | null; // futuro multiusuário
+  created_at: string;
+};
+
 // --- Leads (CRM) — inbound do formulário do site ---
 
 export type LeadStatus = 'novo' | 'respondido' | 'proposta' | 'concluido';
@@ -324,6 +379,21 @@ export interface Database {
         Row: Lead;
         Insert: { id?: string; name: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
         Update: { id?: string; name?: string; phone?: string | null; services?: string[] | null; message?: string | null; source?: string | null; status?: LeadStatus; notes?: string | null; created_at?: string; updated_at?: string; };
+      };
+      projects: {
+        Row: Project;
+        Insert: { id?: string; name: string; client_id?: string | null; proposal_id?: string | null; type?: ProjectType; frequency?: ProjectFrequency | null; status?: ProjectStatus; start_date?: string | null; end_date?: string | null; color?: string; notes?: string | null; created_at?: string; };
+        Update: { id?: string; name?: string; client_id?: string | null; proposal_id?: string | null; type?: ProjectType; frequency?: ProjectFrequency | null; status?: ProjectStatus; start_date?: string | null; end_date?: string | null; color?: string; notes?: string | null; created_at?: string; };
+      };
+      project_task_groups: {
+        Row: ProjectTaskGroup;
+        Insert: { id?: string; project_id: string; name: string; sort_order?: number; start_date?: string | null; end_date?: string | null; depends_on_previous?: boolean; created_at?: string; };
+        Update: { id?: string; project_id?: string; name?: string; sort_order?: number; start_date?: string | null; end_date?: string | null; depends_on_previous?: boolean; created_at?: string; };
+      };
+      project_tasks: {
+        Row: ProjectTask;
+        Insert: { id?: string; project_id: string; group_id?: string | null; title: string; description?: string | null; start_date?: string | null; due_date?: string | null; completed?: boolean; completed_at?: string | null; sort_order?: number; duration_hours?: number | null; depends_on_previous?: boolean; is_template?: boolean; template_id?: string | null; period?: string | null; due_rule?: number | null; assignee?: string | null; created_at?: string; };
+        Update: { id?: string; project_id?: string; group_id?: string | null; title?: string; description?: string | null; start_date?: string | null; due_date?: string | null; completed?: boolean; completed_at?: string | null; sort_order?: number; duration_hours?: number | null; depends_on_previous?: boolean; is_template?: boolean; template_id?: string | null; period?: string | null; due_rule?: number | null; assignee?: string | null; created_at?: string; };
       };
       integration_settings: {
         Row: IntegrationSettings;

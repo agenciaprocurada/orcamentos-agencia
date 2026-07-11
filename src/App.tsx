@@ -29,6 +29,7 @@ import {
   ExternalLink,
   Barcode,
   Inbox,
+  FolderKanban,
   Menu,
   X,
   Clock,
@@ -43,6 +44,7 @@ import { useSupabase, clearDataCache } from './hooks/useSupabase';
 import { supabase, getStoredUser } from './lib/supabase';
 import { SettingsView } from './components/SettingsView';
 import { LeadsView } from './components/LeadsView';
+import { ProjectsView } from './components/ProjectsView';
 import { ContractSigningView } from './components/ContractSigningView';
 import { AgencySettingsView } from './components/AgencySettingsView';
 import { AsaasSettingsView } from './components/AsaasSettingsView';
@@ -110,7 +112,7 @@ function PaymentSlot({ c, genBusy, onGenerate }: { c: CashFlow; genBusy?: boolea
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-import' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'leads'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'proposals' | 'cashflow' | 'cashflow-all' | 'cashflow-categories' | 'finance-accounts' | 'finance-transfers' | 'finance-recurring' | 'finance-import' | 'finance-suppliers' | 'finance-reports' | 'proposal-form' | 'services' | 'service-form' | 'section-templates' | 'section-template-form' | 'contracts' | 'contract-form' | 'contract-templates' | 'contract-template-form' | 'cashflow-form' | 'clients' | 'client-form' | 'settings' | 'leads' | 'projects'>('dashboard');
   // Tipo pré-selecionado ao abrir "Novo Lançamento" pelos atalhos Nova receita/Nova despesa.
   const [newCashFlowType, setNewCashFlowType] = useState<CashFlowType>('Income');
   const [selectedProposal, setSelectedProposal] = useState<{ proposal: Proposal; client: Client | null } | null>(null);
@@ -167,7 +169,7 @@ function App() {
     return () => navigator.serviceWorker?.removeEventListener('message', onSwMessage);
   }, []);
 
-  const { proposals, cashFlows, clients, services, cashFlowCategories, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, loading, refetch, silentRefetch } = useSupabase();
+  const { proposals, cashFlows, clients, services, cashFlowCategories, leads, sectionTemplates, contracts, contractTemplates, agencySettings, bankAccounts, suppliers, recurringExpenses, accountTransfers, projects, projectTaskGroups, projectTasks, loading, refetch, silentRefetch } = useSupabase();
 
   // Loads once per signed-in user. The ref guards against duplicated effect
   // runs (React StrictMode) re-triggering the full load and re-showing the spinner.
@@ -281,6 +283,11 @@ function App() {
             </div>
 
             <div className="flex flex-col gap-1">
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]/70">Gestão</p>
+              <NavButton icon={<FolderKanban size={18} />} label="Projetos" active={activeTab === 'projects'} onClick={() => setActiveTab('projects')} />
+            </div>
+
+            <div className="flex flex-col gap-1">
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-3)]/70">Catálogo</p>
               <NavButton icon={<Briefcase size={18} />} label="Serviços Base" active={activeTab === 'services' || activeTab === 'service-form'} onClick={() => setActiveTab('services')} />
               <NavButton icon={<Layers size={18} />} label="Modelos de Seção" active={activeTab === 'section-templates' || activeTab === 'section-template-form'} onClick={() => setActiveTab('section-templates')} />
@@ -323,6 +330,7 @@ function App() {
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--color-ink)] truncate">
               {activeTab === 'dashboard' ? 'Visão Geral' :
                 activeTab === 'leads' ? 'CRM — Recepção de Leads' :
+                activeTab === 'projects' ? 'Gestão — Projetos' :
                   activeTab === 'proposals' ? 'Gestão de Propostas' :
                     activeTab === 'proposal-form' ? (selectedProposal ? 'Editar Proposta' : 'Nova Proposta') :
                       activeTab === 'services' ? 'Serviços Base' :
@@ -422,6 +430,7 @@ function App() {
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
                 {activeTab === 'dashboard' && <FinanceOverviewView cashFlows={cashFlows} accounts={bankAccounts} transfers={accountTransfers} categories={cashFlowCategories} onEditCashFlow={(c) => { setSelectedCashFlow(c); setActiveTab('cashflow-form'); }} refetch={silentRefetch} />}
                 {activeTab === 'leads' && <LeadsView leads={leads} refetch={silentRefetch} />}
+                {activeTab === 'projects' && <ProjectsView projects={projects} groups={projectTaskGroups} tasks={projectTasks} clients={clients} refetch={silentRefetch} />}
                 {activeTab === 'proposals' && (
                   <ProposalsView
                     proposals={proposals}
@@ -984,7 +993,37 @@ function ApprovalModal({ target, bankAccounts, onClose, onDone }: {
       const { error: cfErr } = await supabase.from('cash_flow').insert(rows);
       if (cfErr) throw cfErr;
 
-      // 4. Gera boleto só para as parcelas marcadas (a função filtra por
+      // 4. Cria o projeto em Gestão > Projetos (grupos = fases da proposta).
+      //    Falha aqui não bloqueia a aprovação — dá para criar manualmente depois.
+      try {
+        const { data: existingProj } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('proposal_id', target.proposal.id)
+          .limit(1);
+        if (!existingProj || existingProj.length === 0) {
+          const { data: proj } = await supabase
+            .from('projects')
+            .insert({
+              name: `${serviceType} — ${clientName}`,
+              client_id: target.proposal.client_id,
+              proposal_id: target.proposal.id,
+              type: 'oneoff',
+              status: 'active',
+              start_date: target.proposal.start_date || new Date().toISOString().split('T')[0],
+            })
+            .select('id')
+            .single();
+          const phases = target.proposal.project_phases;
+          if (proj && phases && phases.length > 0) {
+            await supabase.from('project_task_groups').insert(
+              phases.map((ph, i) => ({ project_id: proj.id, name: ph.name, sort_order: i }))
+            );
+          }
+        }
+      } catch { /* projeto pode ser criado manualmente em Gestão > Projetos */ }
+
+      // 5. Gera boleto só para as parcelas marcadas (a função filtra por
       //    payment_method = 'Boleto'). Pula se nenhuma parcela é boleto.
       if (anyBoleto) {
         const { data: gen, error: genErr } = await supabase.functions.invoke('asaas', {
