@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   AlertCircle, ArrowDownRight, ArrowUpRight, Barcode, BarChart3, CheckCircle, ChevronLeft,
-  ChevronRight, ExternalLink, Landmark, Loader2, PieChart, Wallet,
+  ChevronRight, Eye, EyeOff, ExternalLink, Landmark, Loader2, PieChart, Wallet,
 } from 'lucide-react';
 import type { AccountTransfer, BankAccount, CashFlow, CashFlowCategoryRecord } from '../types/database';
 import { computeAccountBalances, formatBRL, totalBalance } from '../lib/finance';
@@ -31,6 +31,16 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
   const [viewDate, setViewDate] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [hideBalances, setHideBalances] = useState<boolean>(() => {
+    try { return localStorage.getItem('dash_hide_balances') === '1'; } catch { return false; }
+  });
+  const toggleHide = () => setHideBalances(v => {
+    const next = !v;
+    try { localStorage.setItem('dash_hide_balances', next ? '1' : '0'); } catch { /* ignore */ }
+    return next;
+  });
+  // Máscara dos saldos de contas quando o modo "ocultar" está ativo.
+  const money = (v: number) => (hideBalances ? 'R$ ••••••' : formatBRL(v));
 
   const monthPrefix = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
@@ -138,6 +148,15 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
       {/* ---- Seletor de mês (governa o fluxo e os gráficos de categoria) */}
       <div className="flex items-center gap-3">
         <p className="text-sm font-semibold text-[var(--color-ink-2)]">Mês de referência</p>
+        <button
+          onClick={toggleHide}
+          className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-white/60 border border-white/80 shadow-sm text-[var(--color-ink-2)] hover:bg-white transition-colors cursor-pointer"
+          aria-label={hideBalances ? 'Mostrar saldos' : 'Ocultar saldos'}
+          title={hideBalances ? 'Mostrar saldos' : 'Ocultar saldos'}
+        >
+          {hideBalances ? <EyeOff size={14} /> : <Eye size={14} />}
+          <span className="hidden sm:inline">{hideBalances ? 'Mostrar saldos' : 'Ocultar saldos'}</span>
+        </button>
         <div className="ml-auto flex items-center gap-2 bg-white/60 border border-white/80 rounded-xl p-1 shadow-sm">
           <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Mês anterior"><ChevronLeft size={16} /></button>
           <span className="font-semibold text-sm w-36 text-center text-[var(--color-ink-2)]">{monthLabel}</span>
@@ -153,8 +172,8 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
             <Wallet size={15} className="text-[var(--color-primary)]" />
             <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--color-ink-3)]">Saldo em contas</p>
           </div>
-          <p className={`text-[26px] leading-tight font-bold tracking-tight ${saldoTotal >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>{formatBRL(saldoTotal)}</p>
-          <p className="text-xs text-[var(--color-ink-3)] mt-1">Previsto com pendentes: <span className="font-semibold">{formatBRL(previstoTotal)}</span></p>
+          <p className={`text-[26px] leading-tight font-bold tracking-tight ${saldoTotal >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>{money(saldoTotal)}</p>
+          <p className="text-xs text-[var(--color-ink-3)] mt-1">Previsto com pendentes: <span className="font-semibold">{money(previstoTotal)}</span></p>
         </div>
 
         <div className="glass-panel p-5">
@@ -325,7 +344,7 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
           <div className="p-4 border-b border-white/40 bg-white/20 flex items-center gap-2">
             <Landmark size={15} className="text-[var(--color-ink-3)]" />
             <p className="text-sm font-semibold text-[var(--color-ink-2)]">Saldo por conta</p>
-            <span className="ml-auto text-sm font-bold text-[var(--color-ink)]">{formatBRL(saldoTotal)}</span>
+            <span className="ml-auto text-sm font-bold text-[var(--color-ink)]">{money(saldoTotal)}</span>
           </div>
           {balances.length === 0 ? (
             <div className="p-8 text-center text-sm text-[var(--color-ink-3)]">Nenhuma conta cadastrada. Crie suas contas em Financeiro → Contas.</div>
@@ -341,9 +360,9 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
                       {account.name}
                       {account.system_key === 'asaas' && <span className="ml-2 text-[10px] font-semibold uppercase tracking-wider bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full">Automática</span>}
                     </p>
-                    <p className="text-xs text-[var(--color-ink-3)]">Previsto: {formatBRL(projected)}</p>
+                    <p className="text-xs text-[var(--color-ink-3)]">Previsto: {money(projected)}</p>
                   </div>
-                  <span className={`text-sm font-bold ${balance >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>{formatBRL(balance)}</span>
+                  <span className={`text-sm font-bold ${balance >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>{money(balance)}</span>
                 </li>
               ))}
             </ul>
