@@ -18,7 +18,7 @@
 //   Secret: supabase secrets set VAPID_KEYS='{"publicKey":...,"privateKey":...}'
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as webpush from "jsr:@negrel/webpush@0.5.0";
+import { sendPushToAll } from "../_shared/push.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,70 +39,20 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
-// Envia um Web Push para cada inscrição salva. Best-effort: qualquer falha aqui
-// é engolida (o lead já foi inserido). Endpoints expirados (404/410) são
-// removidos da tabela para não acumular lixo.
+// Aviso de novo lead. Best-effort: qualquer falha é engolida (o lead já foi
+// inserido). O envio em si (inscrições, limpeza de 404/410) vive em _shared/push.
 async function notifyNewLead(lead: {
   name: string;
   phone: string | null;
   services: string[];
 }) {
-  const keysJson = Deno.env.get("VAPID_KEYS");
-  if (!keysJson) {
-    console.warn("VAPID_KEYS ausente — push não enviado.");
-    return;
-  }
-
-  const { data: subs, error } = await supabase
-    .from("push_subscriptions")
-    .select("endpoint, p256dh, auth");
-
-  if (error || !subs || subs.length === 0) return;
-
-  const vapidKeys = await webpush.importVapidKeys(JSON.parse(keysJson), {
-    extractable: false,
-  });
-  const appServer = await webpush.ApplicationServer.new({
-    contactInformation: "mailto:agenciaprocurada@gmail.com",
-    vapidKeys,
-  });
-
   const parts = [lead.services.join(", "), lead.phone].filter(Boolean);
-  const message = JSON.stringify({
+  await sendPushToAll(supabase, {
     title: `Novo lead: ${lead.name}`,
     body: parts.length ? parts.join(" • ") : "Novo contato pelo site.",
     tag: "lead",
     url: "/?tab=leads",
   });
-
-  await Promise.all(
-    subs.map(async (s) => {
-      try {
-        const subscriber = appServer.subscribe({
-          endpoint: s.endpoint,
-          keys: { p256dh: s.p256dh, auth: s.auth },
-        });
-        await subscriber.pushTextMessage(message, {});
-      } catch (err) {
-        // PushMessageError não preenche .message — o status vem em .response.
-        const status = err instanceof webpush.PushMessageError
-          ? err.response.status
-          : 0;
-        if (status === 404 || status === 410) {
-          // Inscrição expirada/revogada: remove para não acumular lixo.
-          await supabase
-            .from("push_subscriptions")
-            .delete()
-            .eq("endpoint", s.endpoint);
-        } else {
-          console.error(
-            `Falha ao enviar push (status ${status}):`,
-            err instanceof Error ? err.toString() : String(err),
-          );
-        }
-      }
-    }),
-  );
 }
 
 Deno.serve(async (req) => {

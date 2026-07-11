@@ -14,6 +14,7 @@
 //    é feita pelo token acima.)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendPushToAll } from "../_shared/push.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -63,10 +64,32 @@ Deno.serve(async (req) => {
     ? query.eq("id", externalRef)
     : query.eq("asaas_payment_id", paymentId);
 
-  const { error } = await query;
+  // .select() devolve a(s) parcela(s) afetada(s) para compor o aviso de push.
+  const { data: rows, error } = await query.select("value, description");
   if (error) {
     // 500 faz o Asaas reenviar depois — desejável em falha transitória.
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  }
+
+  // Push de "boleto pago" — só quando o pagamento foi de fato efetivado e uma
+  // parcela foi atualizada. Best-effort: nunca falha a resposta ao Asaas.
+  if (PAID_EVENTS.has(event) && rows && rows.length > 0) {
+    try {
+      const row = rows[0] as { value: number | null; description: string | null };
+      const valor = Number(payment?.value ?? row.value ?? 0).toLocaleString(
+        "pt-BR",
+        { style: "currency", currency: "BRL" },
+      );
+      const desc = (row.description || "").trim();
+      await sendPushToAll(supabase, {
+        title: `Boleto pago: ${valor}`,
+        body: desc ? `Recebido — ${desc}` : "Pagamento recebido no Financeiro.",
+        tag: `boleto-${paymentId}`,
+        url: "/?tab=cashflow",
+      });
+    } catch (err) {
+      console.error("push boleto pago falhou:", err);
+    }
   }
 
   return new Response(JSON.stringify({ ok: true }), { status: 200 });
