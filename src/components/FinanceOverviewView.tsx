@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import type { AccountTransfer, BankAccount, CashFlow, CashFlowCategoryRecord } from '../types/database';
 import { computeAccountBalances, formatBRL, totalBalance } from '../lib/finance';
+import { periodLabel, weekStart } from '../lib/projectRecurrence';
 
 // Paleta de reserva para categorias sem cor cadastrada.
 const PIE_FALLBACK = ['#C13584', '#059669', '#E11D48', '#F59E0B', '#6366F1', '#0EA5E9', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
@@ -17,7 +18,8 @@ const EXPENSE = '#E11D48';
 
 const toKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-type DayFlow = { day: number; inPaid: number; inPending: number; outPaid: number; outPending: number; net: number };
+// Um ponto do gráfico de fluxo (um dia, no modo mensal ou semanal).
+type FlowPoint = { date: string; label: string; showLabel: boolean; inPaid: number; inPending: number; outPaid: number; outPending: number; net: number };
 
 export function FinanceOverviewView({ cashFlows, accounts, transfers, categories, onEditCashFlow, refetch }: {
   cashFlows: CashFlow[];
@@ -29,6 +31,10 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
 }) {
   const today = toKey(new Date());
   const [viewDate, setViewDate] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  // Fluxo de caixa: visão mensal (governada pelo seletor de mês) ou semanal
+  // (com navegação própria de semana, começando na semana atual).
+  const [flowMode, setFlowMode] = useState<'month' | 'week'>('month');
+  const [weekRef, setWeekRef] = useState(() => new Date());
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [hideBalances, setHideBalances] = useState<boolean>(() => {
@@ -44,7 +50,6 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
 
   const monthPrefix = `${viewDate.getFullYear()}-${String(viewDate.getMonth() + 1).padStart(2, '0')}`;
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-  const isCurrentMonth = today.startsWith(monthPrefix);
   const monthLabelRaw = viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   const monthLabel = monthLabelRaw.charAt(0).toUpperCase() + monthLabelRaw.slice(1);
 
@@ -72,23 +77,39 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
   const saldoTotal = totalBalance(balances);
   const previstoTotal = balances.reduce((s, b) => s + b.projected, 0);
 
-  // ---- Série diária do mês exibido
-  const series: DayFlow[] = useMemo(() => {
-    const days: DayFlow[] = Array.from({ length: daysInMonth }, (_, i) => ({ day: i + 1, inPaid: 0, inPending: 0, outPaid: 0, outPending: 0, net: 0 }));
+  // ---- Série do período exibido: um ponto por dia do mês, ou os 7 dias da semana
+  const series: FlowPoint[] = useMemo(() => {
+    const pts: FlowPoint[] = [];
+    if (flowMode === 'week') {
+      const names = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+      const start = weekStart(weekRef);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        pts.push({ date: toKey(d), label: `${names[i]} ${String(d.getDate()).padStart(2, '0')}`, showLabel: true, inPaid: 0, inPending: 0, outPaid: 0, outPending: 0, net: 0 });
+      }
+    } else {
+      for (let i = 1; i <= daysInMonth; i++) {
+        const date = `${monthPrefix}-${String(i).padStart(2, '0')}`;
+        pts.push({ date, label: String(i), showLabel: i === 1 || i % 5 === 0, inPaid: 0, inPending: 0, outPaid: 0, outPending: 0, net: 0 });
+      }
+    }
+    const idxOf = new Map(pts.map((p, i) => [p.date, i]));
     for (const c of cashFlows) {
-      if (!c.date?.startsWith(monthPrefix)) continue;
-      const idx = Number(c.date.slice(8, 10)) - 1;
-      if (idx < 0 || idx >= daysInMonth) continue;
+      const i = c.date ? idxOf.get(c.date) : undefined;
+      if (i === undefined) continue;
       const v = Number(c.value) || 0;
-      if (c.type === 'Income') { if (c.status === 'Paid') days[idx].inPaid += v; else days[idx].inPending += v; }
-      else { if (c.status === 'Paid') days[idx].outPaid += v; else days[idx].outPending += v; }
+      const p = pts[i];
+      if (c.type === 'Income') { if (c.status === 'Paid') p.inPaid += v; else p.inPending += v; }
+      else { if (c.status === 'Paid') p.outPaid += v; else p.outPending += v; }
     }
     let acc = 0;
-    for (const d of days) { acc += d.inPaid + d.inPending - d.outPaid - d.outPending; d.net = acc; }
-    return days;
-  }, [cashFlows, monthPrefix, daysInMonth]);
+    for (const p of pts) { acc += p.inPaid + p.inPending - p.outPaid - p.outPending; p.net = acc; }
+    return pts;
+  }, [cashFlows, flowMode, weekRef, monthPrefix, daysInMonth]);
 
-  const hasMonthData = series.some(d => d.inPaid + d.inPending + d.outPaid + d.outPending > 0);
+  const hasFlowData = series.some(d => d.inPaid + d.inPending + d.outPaid + d.outPending > 0);
+  const weekLabel = periodLabel('weekly', weekRef);
 
   // ---- Categorias do mês exibido (para os gráficos de pizza)
   const catData = useMemo(() => {
@@ -130,8 +151,8 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
   // ---- Geometria do gráfico (SVG viewBox fixo, responsivo por largura)
   const W = 960, H = 240, PAD_L = 8, PAD_R = 8, AXIS_Y = 148; // eixo zero
   const innerW = W - PAD_L - PAD_R;
-  const slot = innerW / daysInMonth;
-  const barW = Math.min(18, Math.max(6, slot - 4));
+  const slot = innerW / series.length;
+  const barW = Math.min(flowMode === 'week' ? 48 : 18, Math.max(6, slot - 4));
   const maxBar = Math.max(1, ...series.map(d => Math.max(d.inPaid + d.inPending, d.outPaid + d.outPending)));
   const maxAbsNet = Math.max(1, ...series.map(d => Math.abs(d.net)));
   const barScale = (AXIS_Y - 26) / maxBar;          // barras: acima e abaixo do eixo
@@ -214,20 +235,44 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
       {/* ---- Fluxo + categorias (pizza): lado a lado no desktop, empilhados no mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
 
-      {/* Fluxo de caixa do mês */}
+      {/* Fluxo de caixa do período (mês exibido ou semana navegável) */}
       <div className="glass-panel overflow-hidden">
-        <div className="p-4 sm:px-6 border-b border-white/40 bg-white/20">
-          <p className="text-sm font-semibold text-[var(--color-ink-2)]">Fluxo de caixa diário</p>
-          <p className="text-xs text-[var(--color-ink-3)]">Entradas e saídas por dia de vencimento; a linha é o acumulado do mês.</p>
+        <div className="p-4 sm:px-6 border-b border-white/40 bg-white/20 flex items-start gap-2 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--color-ink-2)]">Fluxo de caixa {flowMode === 'week' ? 'da semana' : 'diário'}</p>
+            <p className="text-xs text-[var(--color-ink-3)]">Entradas e saídas por dia de vencimento; a linha é o acumulado do período.</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
+            {flowMode === 'week' && (
+              <div className="flex items-center gap-1 bg-white/60 border border-white/80 rounded-lg p-0.5 shadow-sm">
+                <button onClick={() => { setHoverDay(null); setWeekRef(w => new Date(w.getFullYear(), w.getMonth(), w.getDate() - 7)); }} className="p-1 hover:bg-white rounded-md transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Semana anterior"><ChevronLeft size={14} /></button>
+                <span className="text-[11px] font-semibold text-[var(--color-ink-2)] px-1 whitespace-nowrap">{weekLabel}</span>
+                <button onClick={() => { setHoverDay(null); setWeekRef(w => new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7)); }} className="p-1 hover:bg-white rounded-md transition-colors text-[var(--color-ink-3)] cursor-pointer" aria-label="Próxima semana"><ChevronRight size={14} /></button>
+              </div>
+            )}
+            <div className="flex items-center bg-white/60 border border-white/80 rounded-lg p-0.5 shadow-sm">
+              {([['month', 'Mês'], ['week', 'Semana']] as const).map(([key, lbl]) => (
+                <button
+                  key={key}
+                  onClick={() => { setHoverDay(null); setFlowMode(key); }}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${flowMode === key ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-ink-3)] hover:text-[var(--color-ink-2)]'}`}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {!hasMonthData ? (
+        {!hasFlowData ? (
           <div className="p-10 text-center text-sm text-[var(--color-ink-3)]">
-            Nenhum lançamento em {monthLabel}. Registre uma receita ou despesa para ver o fluxo do mês.
+            {flowMode === 'week'
+              ? `Nenhum lançamento na ${weekLabel.toLowerCase()}.`
+              : `Nenhum lançamento em ${monthLabel}. Registre uma receita ou despesa para ver o fluxo do mês.`}
           </div>
         ) : (
           <div className="p-4 sm:p-6 relative">
-            <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label={`Fluxo de caixa diário de ${monthLabel}`}>
+            <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label={`Fluxo de caixa de ${flowMode === 'week' ? weekLabel : monthLabel}`}>
               {/* grid: eixo zero + topo/fundo sutis */}
               <line x1={PAD_L} x2={W - PAD_R} y1={AXIS_Y} y2={AXIS_Y} stroke="#1b1420" strokeOpacity="0.18" strokeWidth="1" />
               <line x1={PAD_L} x2={W - PAD_R} y1={AXIS_Y - maxBar * barScale} y2={AXIS_Y - maxBar * barScale} stroke="#1b1420" strokeOpacity="0.06" strokeWidth="1" />
@@ -238,9 +283,9 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
                 const inP = d.inPaid * barScale, inPe = d.inPending * barScale;
                 const outP = d.outPaid * barScale, outPe = d.outPending * barScale;
                 const isHover = hoverDay === i;
-                const isToday = isCurrentMonth && d.day === Number(today.slice(8, 10));
+                const isToday = d.date === today;
                 return (
-                  <g key={d.day}>
+                  <g key={d.date}>
                     {isToday && <rect x={PAD_L + slot * i} y={12} width={slot} height={H - 40} fill="#1b1420" fillOpacity="0.045" rx="4" />}
                     {isToday && <rect x={xOf(i) - barW / 2} y={H - 26} width={barW} height={3} rx="1.5" fill="#C13584" />}
                     {isHover && <rect x={PAD_L + slot * i} y={12} width={slot} height={H - 40} fill="#1b1420" fillOpacity="0.05" rx="4" />}
@@ -250,9 +295,9 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
                     {/* saídas (abaixo do eixo) */}
                     {outP > 0 && <rect x={x} y={AXIS_Y + 1} width={barW} height={outP} fill={EXPENSE} rx="2.5" />}
                     {outPe > 0 && <rect x={x} y={AXIS_Y + 1 + outP + (outP > 0 ? 2 : 0)} width={barW} height={outPe} fill={EXPENSE} fillOpacity="0.35" rx="2.5" />}
-                    {/* rótulo do dia (a cada 5 + hoje) */}
-                    {(d.day === 1 || d.day % 5 === 0 || isToday) && (
-                      <text x={xOf(i)} y={H - 10} fontSize="10" textAnchor="middle" fill="#1b1420" fillOpacity={isToday ? 0.9 : 0.45} fontWeight={isToday ? 700 : 400}>{d.day}</text>
+                    {/* rótulo do dia (mensal: a cada 5 + hoje; semanal: todos) */}
+                    {(d.showLabel || isToday) && (
+                      <text x={xOf(i)} y={H - 10} fontSize="10" textAnchor="middle" fill="#1b1420" fillOpacity={isToday ? 0.9 : 0.45} fontWeight={isToday ? 700 : 400}>{d.label}</text>
                     )}
                     {/* alvo de hover: coluna inteira */}
                     <rect x={PAD_L + slot * i} y={0} width={slot} height={H} fill="transparent"
@@ -272,7 +317,7 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
             {hovered && (
               <div className="absolute z-10 pointer-events-none bg-white/95 backdrop-blur border border-white/80 shadow-lg rounded-xl px-3.5 py-2.5 text-xs"
                 style={{ left: `${(xOf(hoverDay!) / W) * 100}%`, top: 8, transform: xOf(hoverDay!) > W * 0.72 ? 'translateX(-105%)' : 'translateX(8px)' }}>
-                <p className="font-bold text-[var(--color-ink)] mb-1">{String(hovered.day).padStart(2, '0')}/{monthPrefix.slice(5)}/{monthPrefix.slice(0, 4)}</p>
+                <p className="font-bold text-[var(--color-ink)] mb-1">{new Date(hovered.date + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                 <p className="text-[var(--color-ink-2)]">Entradas: <span className="font-semibold" style={{ color: INCOME }}>{formatBRL(hovered.inPaid + hovered.inPending)}</span>{hovered.inPending > 0 && <span className="text-[var(--color-ink-3)]"> ({formatBRL(hovered.inPending)} pend.)</span>}</p>
                 <p className="text-[var(--color-ink-2)]">Saídas: <span className="font-semibold" style={{ color: EXPENSE }}>{formatBRL(hovered.outPaid + hovered.outPending)}</span>{hovered.outPending > 0 && <span className="text-[var(--color-ink-3)]"> ({formatBRL(hovered.outPending)} pend.)</span>}</p>
                 <p className="text-[var(--color-ink-2)] mt-0.5 pt-0.5 border-t border-gray-100">Acumulado: <span className={`font-bold ${hovered.net >= 0 ? 'text-[var(--color-ink)]' : 'text-rose-600'}`}>{formatBRL(hovered.net)}</span></p>
@@ -284,7 +329,7 @@ export function FinanceOverviewView({ cashFlows, accounts, transfers, categories
               <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: INCOME }} /> Entradas</span>
               <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: EXPENSE }} /> Saídas</span>
               <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] opacity-35" style={{ backgroundColor: INCOME }} /> Pendente</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-0.5 rounded bg-[#1b1420]/75" /> Acumulado do mês</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-4 h-0.5 rounded bg-[#1b1420]/75" /> Acumulado do período</span>
             </div>
           </div>
         )}
