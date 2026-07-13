@@ -2209,10 +2209,10 @@ function CashFlowView({ cashFlows, bankAccounts, onEditCashFlow, refetch }: {
     return true;
   });
 
-  // Extrato: dias em ordem cronológica, lançamentos agrupados por dia.
+  // Extrato: dias do mais recente ao mais antigo, lançamentos agrupados por dia.
   const dayGroups = (() => {
     const map = new Map<string, CashFlow[]>();
-    for (const c of [...filteredCashFlows].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const c of [...filteredCashFlows].sort((a, b) => b.date.localeCompare(a.date))) {
       const list = map.get(c.date) || [];
       list.push(c);
       map.set(c.date, list);
